@@ -1,0 +1,42 @@
+{
+  "name": "syntaxdropshipping",
+  "version": "1.0.0",
+  "description": "Syntax Dropshipping Platform - Professional dropshipping solutions for e-commerce businesses",
+  "main": "server.js",
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "nodemon server/server.js",
+    "client": "cd client && npm start",
+    "build": "cd client && npm run build",
+    "install-all": "npm install && cd client && npm install",
+    "init-data": "node server/init-data.js",
+    "init-db": "node server/config/initDatabase.js",
+    "test-email": "node server/utils/testEmailConfig.js",
+    "start": "node server/server.js",
+    "setup": "npm run install-all && npm run init-db"
+  },
+  "keywords": [
+    "dropshipping",
+    "ecommerce",
+    "china-sourcing",
+    "fulfillment"
+  ],
+  "author": "Syntax Dropshipping Team",
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.14.3",
+    "nodemailer": "^6.9.7"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "nodemon": "^3.0.2"
+  }
+}
