@@ -4,20 +4,29 @@ A professional dropshipping platform built with React and Node.js, providing com
 
 ## 🚀 Features
 
+### ✅ Core Functions (Fully Working)
+- **User Registration/Login**: Complete with JWT authentication
+- **Email Verification System**: Gmail SMTP with verification codes
+- **Product Display & Search**: Responsive product catalog
+- **Database Integration**: MySQL with complete schema
+- **Modern UI/UX**: Tailwind CSS responsive design
+- **Contact System**: Professional contact forms
+
 ### Frontend (H5 Mobile-First)
 - **Responsive Design**: Mobile-first approach with excellent desktop compatibility
-- **User Authentication**: Email-based registration and login system
+- **User Authentication**: Email verification code system ✅
 - **Modern UI/UX**: Clean, modern design with smooth animations
 - **Service Pages**: Comprehensive information about dropshipping services
 - **Product Catalog**: Browse and search through thousands of products
-- **Contact System**: Professional contact forms and business information
+- **Real-time Validation**: Form validation with instant feedback
 
 ### Backend API
-- **RESTful API**: Well-structured API endpoints
-- **User Management**: Registration, authentication, and profile management
-- **Product Management**: Hot products and catalog management
-- **Email Service**: Welcome emails and notifications
-- **File-based Storage**: JSON-based data storage for development
+- **RESTful API**: Well-structured API endpoints ✅
+- **User Management**: Registration, authentication, and profile management ✅
+- **Email Service**: Gmail SMTP verification system ✅
+- **MySQL Database**: Complete database integration ✅
+- **JWT Authentication**: Secure token-based auth ✅
+- **Rate Limiting**: Smart rate limiting for API protection ✅
 
 ### Core Services
 1. **Dropshipping**: Complete order fulfillment without inventory
@@ -82,7 +91,7 @@ DB_NAME=syntaxdropshipping
 DB_PORT=3306
 
 # Server Configuration
-PORT=5000
+PORT=5001
 NODE_ENV=development
 
 # JWT Configuration
@@ -98,7 +107,7 @@ SMTP_PASS=your-app-password
 Create a `.env` file in the client directory:
 ```env
 # API Configuration
-REACT_APP_API_URL=http://localhost:5000/api
+REACT_APP_API_URL=http://localhost:5001/api
 ```
 
 ## 🚀 Running the Application
@@ -115,6 +124,24 @@ npm run setup
 # 2. Start development server
 npm run dev
 ```
+
+### 🔄 Service Management Scripts
+For easy development, use the provided restart scripts:
+
+```bash
+# Full restart with health checks and colored output
+./restart-services.sh
+
+# Quick restart for rapid development
+./quick-restart.sh
+```
+
+Both scripts will:
+- ✅ Stop existing services gracefully
+- ✅ Clear port conflicts (5001, 3000)
+- ✅ Start backend server (http://localhost:5001)
+- ✅ Start frontend server (http://localhost:3000)
+- ✅ Provide service status feedback
 
 ### Manual Setup
 ```bash
