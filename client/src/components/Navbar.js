@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, User, LogOut, Settings, Package } from 'lucide-react';
+import { Menu, X, User, LogOut, Settings, Package, DollarSign } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from '../hooks/useTranslation';
+import LanguageSelector from './LanguageSelector';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -10,6 +12,7 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, user, logout } = useAuth();
+  const { t } = useTranslation();
 
   // Handle scroll effect
   useEffect(() => {
@@ -43,10 +46,10 @@ const Navbar = () => {
 
   // Navigation items
   const navItems = [
-    { path: '/', label: 'Home' },
-    { path: '/services', label: 'Services' },
-    { path: '/products', label: 'Products' },
-    { path: '/contact', label: 'Contact Us' }
+    { path: '/', label: t('nav.home') },
+    { path: '/services', label: t('nav.services') },
+    ...(isAuthenticated ? [{ path: '/commission', label: t('nav.commission') }] : []),
+    { path: '/contact', label: t('nav.contact') }
   ];
 
   const isActive = (path) => {
@@ -59,7 +62,9 @@ const Navbar = () => {
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           isScrolled 
             ? 'bg-white/95 backdrop-blur-md shadow-lg py-2' 
-            : 'bg-transparent py-4'
+            : location.pathname === '/' 
+              ? 'bg-transparent py-4' 
+              : 'bg-white/95 backdrop-blur-md shadow-lg py-3'
         }`}
       >
         <div className="container-custom">
@@ -74,11 +79,13 @@ const Navbar = () => {
               </div>
               <div className="hidden sm:block">
                 <span className={`text-xl font-bold transition-colors ${
-                  isScrolled ? 'text-gray-900' : 'text-white'
+                  isScrolled || location.pathname !== '/' ? 'text-gray-900' : 'text-white'
                 }`}>
                   Syntax
                 </span>
-                <span className="text-primary-600 font-bold text-xl ml-1">
+                <span className={`font-bold text-xl ml-1 transition-colors ${
+                  isScrolled || location.pathname !== '/' ? 'text-primary-600' : 'text-yellow-300'
+                }`}>
                   Dropshipping
                 </span>
               </div>
@@ -92,10 +99,10 @@ const Navbar = () => {
                   to={item.path}
                   className={`relative py-2 px-1 font-medium transition-colors duration-200 ${
                     isActive(item.path)
-                      ? isScrolled
+                      ? (isScrolled || location.pathname !== '/')
                         ? 'text-primary-600'
                         : 'text-white'
-                      : isScrolled
+                      : (isScrolled || location.pathname !== '/')
                         ? 'text-gray-600 hover:text-primary-600'
                         : 'text-white/90 hover:text-white'
                   }`}
@@ -110,12 +117,13 @@ const Navbar = () => {
 
             {/* Desktop Auth Section */}
             <div className="hidden lg:flex items-center space-x-4">
+              <LanguageSelector />
               {isAuthenticated ? (
                 <div className="relative">
                   <button
                     onClick={toggleUserMenu}
                     className={`flex items-center space-x-2 px-4 py-2 rounded-full transition-all duration-200 ${
-                      isScrolled
+                      (isScrolled || location.pathname !== '/')
                         ? 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                         : 'bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm'
                     }`}
@@ -132,14 +140,14 @@ const Navbar = () => {
                         className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
                       >
                         <Settings size={16} />
-                        <span>Profile</span>
+                        <span>{t('nav.profile')}</span>
                       </Link>
                       <button
                         onClick={handleLogout}
                         className="flex items-center space-x-2 w-full px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors text-left"
                       >
                         <LogOut size={16} />
-                        <span>Logout</span>
+                        <span>{t('nav.logout')}</span>
                       </button>
                     </div>
                   )}
@@ -149,18 +157,18 @@ const Navbar = () => {
                   <Link
                     to="/login"
                     className={`px-4 py-2 font-medium rounded-full transition-all duration-200 ${
-                      isScrolled
+                      (isScrolled || location.pathname !== '/')
                         ? 'text-gray-600 hover:text-primary-600'
                         : 'text-white/90 hover:text-white'
                     }`}
                   >
-                    Login
+                    {t('nav.login')}
                   </Link>
                   <Link
                     to="/register"
                     className="btn-primary text-sm"
                   >
-                    Sign Up
+                    {t('nav.register')}
                   </Link>
                 </div>
               )}
@@ -170,7 +178,7 @@ const Navbar = () => {
             <button
               onClick={toggleMobileMenu}
               className={`lg:hidden p-2 rounded-lg transition-colors ${
-                isScrolled
+                (isScrolled || location.pathname !== '/')
                   ? 'text-gray-600 hover:bg-gray-100'
                   : 'text-white hover:bg-white/20'
               }`}
@@ -228,8 +236,20 @@ const Navbar = () => {
                 ))}
               </div>
 
+              {/* Language Selector */}
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                <div className="px-4 pb-2">
+                  <span className="text-sm font-medium text-gray-600">
+                    {t('common.language') || 'Language'}
+                  </span>
+                </div>
+                <div className="px-4">
+                  <LanguageSelector />
+                </div>
+              </div>
+
               {/* Auth section */}
-              <div className="mt-8 pt-6 border-t border-gray-200">
+              <div className="mt-6 pt-4 border-t border-gray-200">
                 {isAuthenticated ? (
                   <div className="space-y-1">
                     <div className="px-4 py-2 text-sm text-gray-600">
@@ -240,14 +260,14 @@ const Navbar = () => {
                       className="flex items-center space-x-2 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
                     >
                       <Settings size={18} />
-                      <span>Profile</span>
+                      <span>{t('nav.profile')}</span>
                     </Link>
                     <button
                       onClick={handleLogout}
                       className="flex items-center space-x-2 w-full px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors text-left"
                     >
                       <LogOut size={18} />
-                      <span>Logout</span>
+                      <span>{t('nav.logout')}</span>
                     </button>
                   </div>
                 ) : (
@@ -256,13 +276,13 @@ const Navbar = () => {
                       to="/login"
                       className="block w-full text-center px-4 py-3 font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                     >
-                      Login
+                      {t('nav.login')}
                     </Link>
                     <Link
                       to="/register"
                       className="block w-full text-center btn-primary"
                     >
-                      Sign Up
+                      {t('nav.register')}
                     </Link>
                   </div>
                 )}

@@ -164,6 +164,28 @@ export function AuthProvider({ children, initialUser = null }) {
     dispatch({ type: AUTH_ACTIONS.CLEAR_ERROR });
   };
 
+  // Initialize auth state from localStorage
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token && !state.isAuthenticated && !state.user) {
+      // Try to verify the token and restore user state
+      const verifyAndRestore = async () => {
+        try {
+          const response = await authAPI.verifyToken();
+          dispatch({ 
+            type: AUTH_ACTIONS.LOGIN_SUCCESS, 
+            payload: { user: response.user } 
+          });
+        } catch (error) {
+          // Token is invalid, remove it
+          localStorage.removeItem('token');
+        }
+      };
+      
+      verifyAndRestore();
+    }
+  }, [state.isAuthenticated, state.user]);
+
   // Auto-logout when token expires
   useEffect(() => {
     const token = localStorage.getItem('token');

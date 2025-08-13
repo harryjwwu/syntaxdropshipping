@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Mail, Phone, MapPin, MessageCircle, Send, CheckCircle } from 'lucide-react';
 import { InlineSpinner } from '../components/LoadingSpinner';
+import WhatsAppButton from '../components/WhatsAppButton';
 import toast from 'react-hot-toast';
 
 const ContactPage = () => {
@@ -97,6 +98,19 @@ const ContactPage = () => {
                     </div>
                   </div>
                 ))}
+              </div>
+
+              {/* WhatsApp Contact */}
+              <div className="mt-8 p-6 bg-green-50 rounded-xl border border-green-200">
+                <h3 className="font-semibold text-gray-900 mb-3">Quick Chat</h3>
+                <p className="text-gray-600 mb-4 text-sm">
+                  Need immediate assistance? Chat with us on WhatsApp for instant support.
+                </p>
+                <WhatsAppButton 
+                  variant="inline"
+                  messageKey="whatsapp.supportMessage"
+                  className="w-full justify-center"
+                />
               </div>
 
               {/* Business Hours */}

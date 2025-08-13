@@ -1,6 +1,7 @@
 import React from 'react';
 import { Package, MapPin, Layers, Clock, CheckCircle, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import WhatsAppButton from '../components/WhatsAppButton';
 
 const ServicesPage = () => {
   const services = [
@@ -88,10 +89,15 @@ const ServicesPage = () => {
       <section className="bg-gradient-to-r from-primary-500 to-secondary-500 text-white py-20">
         <div className="container-custom text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-6">Our Services</h1>
-          <p className="text-xl max-w-3xl mx-auto leading-relaxed">
+          <p className="text-xl max-w-3xl mx-auto leading-relaxed mb-8">
             Comprehensive dropshipping solutions designed to help you build and scale 
             your e-commerce business with confidence.
           </p>
+          <WhatsAppButton 
+            variant="inline"
+            messageKey="whatsapp.generalMessage"
+            className="bg-green-500 hover:bg-green-600"
+          />
         </div>
       </section>
 

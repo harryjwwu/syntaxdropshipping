@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Package, MapPin, Layers, Clock, 
-         Star, TrendingUp, Shield, Zap, CheckCircle } from 'lucide-react';
+         Shield, Zap } from 'lucide-react';
 import { productAPI } from '../utils/api';
-import { LoadingSkeleton, CardSkeleton } from '../components/LoadingSpinner';
+import { CardSkeleton } from '../components/LoadingSpinner';
+import { useTranslation } from '../hooks/useTranslation';
+import WhatsAppButton from '../components/WhatsAppButton';
 
 const HomePage = () => {
+  const { t } = useTranslation();
   const [hotProducts, setHotProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -47,7 +50,7 @@ const HomePage = () => {
             </div>
             <div className="ml-4">
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold">
-                Syntax <span className="text-orange-400">Dropshipping</span>
+                Syntax <span className="text-yellow-300">Dropshipping</span>
               </h1>
             </div>
           </div>
@@ -55,23 +58,28 @@ const HomePage = () => {
           {/* Main heading */}
           <div className="mb-6">
             <p className="text-lg sm:text-xl lg:text-2xl font-medium mb-4">
-              Our goal is <span className="text-orange-400 font-bold">Good Service Real</span>
+              {t('home.subtitle')}
             </p>
           </div>
 
           {/* Value proposition */}
           <p className="text-lg sm:text-xl lg:text-2xl mb-8 leading-relaxed max-w-3xl mx-auto">
-            Achieve higher profitability with the lowest cost for every order without compromising quality.
+            {t('home.description')}
           </p>
 
-          {/* CTA Button */}
+          {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
             <Link
               to="/services"
               className="btn-primary text-lg px-8 py-4 bg-orange-500 hover:bg-orange-600 transform hover:scale-105 transition-all duration-300"
             >
-              INSTALL APP BY SHOPIFY
+              {t('home.getStarted')}
             </Link>
+            <WhatsAppButton 
+              variant="inline"
+              messageKey="whatsapp.heroMessage"
+              className="text-lg px-8 py-4"
+            />
           </div>
 
           {/* Trust indicators */}
@@ -310,6 +318,12 @@ const HomePage = () => {
       <HotProductsSection />
       <StatsSection />
       <CTASection />
+      
+      {/* Floating WhatsApp Button */}
+      <WhatsAppButton 
+        variant="floating"
+        messageKey="whatsapp.heroMessage"
+      />
     </div>
   );
 };

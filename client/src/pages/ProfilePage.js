@@ -4,6 +4,7 @@ import { User, Mail, Building, Save, Shield, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { userAPI } from '../utils/api';
 import { InlineSpinner, LoadingOverlay } from '../components/LoadingSpinner';
+import WhatsAppButton from '../components/WhatsAppButton';
 import toast from 'react-hot-toast';
 
 const ProfilePage = () => {
@@ -394,6 +395,19 @@ const ProfilePage = () => {
                     </span>
                   </div>
                 </div>
+              </div>
+
+              {/* Support Section */}
+              <div className="bg-white rounded-2xl shadow-soft p-8 mt-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Need Help?</h3>
+                <p className="text-gray-600 mb-4 text-sm">
+                  Have questions about your account or our services? Contact us directly on WhatsApp.
+                </p>
+                <WhatsAppButton 
+                  variant="inline"
+                  messageKey="whatsapp.supportMessage"
+                  className="w-full justify-center"
+                />
               </div>
             </div>
           </div>

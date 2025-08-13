@@ -101,6 +101,76 @@ export const contactAPI = {
   subscribeNewsletter: (email) => api.post('/contact/newsletter', { email })
 };
 
+// Commission API
+export const commissionAPI = {
+  // 获取用户的推荐码
+  getReferralCode: () => api.get('/commission/referral-code'),
+  
+  // 获取用户的佣金账户信息
+  getAccount: () => api.get('/commission/account'),
+  
+  // 获取用户的佣金记录
+  getRecords: (params = {}) => api.get('/commission/records', { params }),
+  
+  // 获取用户的提现记录
+  getWithdrawals: (params = {}) => api.get('/commission/withdrawals', { params }),
+  
+  // 获取推荐统计信息
+  getReferralStats: () => api.get('/commission/referral-stats'),
+  
+  // 申请提现
+  requestWithdrawal: (withdrawalData) => api.post('/commission/withdraw', withdrawalData),
+  
+  // 获取推荐的用户列表
+  getReferredUsers: (params = {}) => api.get('/commission/referred-users', { params }),
+  
+  // 获取佣金设置信息
+  getSettings: () => api.get('/commission/settings'),
+  
+  // 验证推荐码
+  validateReferral: (code) => api.get(`/commission/validate-referral/${code}`)
+};
+
+// Wallet API
+export const walletAPI = {
+  // 获取钱包余额
+  getBalance: () => api.get('/wallet/balance'),
+  
+  // 获取系统银行账户信息
+  getBankInfo: (currency = 'USD') => api.get(`/wallet/bank-info?currency=${currency}`),
+  
+  // 创建充值记录
+  createDeposit: (depositData) => {
+    const formData = new FormData();
+    formData.append('amount', depositData.amount);
+    formData.append('paymentMethod', depositData.paymentMethod);
+    if (depositData.bankInfo) {
+      formData.append('bankInfo', JSON.stringify(depositData.bankInfo));
+    }
+    if (depositData.paymentSlip) {
+      formData.append('paymentSlip', depositData.paymentSlip);
+    }
+    
+    return api.post('/wallet/deposit', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+  
+  // 获取充值记录
+  getDeposits: (params = {}) => api.get('/wallet/deposits', { params }),
+  
+  // 获取交易历史
+  getTransactions: (params = {}) => api.get('/wallet/transactions', { params }),
+  
+  // 管理员：获取所有充值记录
+  adminGetDeposits: (params = {}) => api.get('/wallet/admin/deposits', { params }),
+  
+  // 管理员：处理充值申请
+  adminProcessDeposit: (depositId, data) => api.put(`/wallet/admin/deposits/${depositId}`, data)
+};
+
 // Health check
 export const healthAPI = {
   check: () => api.get('/health')

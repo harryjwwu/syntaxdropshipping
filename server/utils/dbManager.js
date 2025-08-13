@@ -26,11 +26,11 @@ const userDB = {
   // Create new user
   async create(userData) {
     const connection = await getConnection();
-    const { email, password, name, company = null } = userData;
+    const { email, password, name, company = null, referred_by = null } = userData;
     
     const [result] = await connection.execute(
-      'INSERT INTO users (email, password, name, company, role, is_active) VALUES (?, ?, ?, ?, ?, ?)',
-      [email, password, name, company, 'user', true]
+      'INSERT INTO users (email, password, name, company, role, is_active, referred_by) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [email, password, name, company, 'user', true, referred_by]
     );
     
     return await this.findById(result.insertId);

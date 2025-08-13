@@ -10,12 +10,18 @@ const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const productRoutes = require('./routes/products');
 const verificationRoutes = require('./routes/verification');
+const commissionRoutes = require('./routes/commission');
+const orderRoutes = require('./routes/ordersFixed');
+const walletRoutes = require('./routes/wallet');
 
 // Import database
 const { testConnection } = require('./config/database');
 
+// Import commission cron job
+// const commissionCronJob = require('./utils/commissionCronJob');
+
 const app = express();
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 5001;
 
 // Security middleware
 app.use(helmet());
@@ -54,6 +60,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/verification', verificationRoutes);
+app.use('/api/commission', commissionRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/wallet', walletRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -94,6 +103,14 @@ app.listen(PORT, async () => {
   if (dbConnected) {
     console.log('✅ Database connection successful');
     console.log(`📊 Database: ${process.env.DB_NAME || 'syntaxdropshipping'}`);
+    
+    // Start commission cron jobs
+    try {
+      // commissionCronJob.start();
+      console.log('⏰ Commission cron jobs disabled (module not found)');
+    } catch (error) {
+      console.error('❌ Failed to start commission cron jobs:', error);
+    }
   } else {
     console.log('❌ Database connection failed');
     console.log('⚠️  Make sure MySQL is running and database is initialized');

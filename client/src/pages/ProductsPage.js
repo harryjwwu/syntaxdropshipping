@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, Package } from 'lucide-react';
 import { productAPI } from '../utils/api';
-import { LoadingSkeleton, CardSkeleton } from '../components/LoadingSpinner';
+import { CardSkeleton } from '../components/LoadingSpinner';
+import WhatsAppButton from '../components/WhatsAppButton';
 
 const ProductsPage = () => {
   const [products, setProducts] = useState([]);
@@ -57,9 +58,14 @@ const ProductsPage = () => {
       <section className="bg-gradient-to-r from-primary-500 to-secondary-500 text-white py-16">
         <div className="container-custom text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-6">Our Products</h1>
-          <p className="text-xl max-w-2xl mx-auto">
+          <p className="text-xl max-w-2xl mx-auto mb-8">
             Discover thousands of high-quality products ready for dropshipping
           </p>
+          <WhatsAppButton 
+            variant="inline"
+            messageKey="whatsapp.generalMessage"
+            className="bg-green-500 hover:bg-green-600"
+          />
         </div>
       </section>
 

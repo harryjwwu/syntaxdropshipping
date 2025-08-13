@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const { userDB } = require('../utils/dbManager');
 const { sendWelcomeEmail } = require('../utils/emailService');
 const verificationCodeManager = require('../utils/verificationCodeManager');
+const commissionManager = require('../utils/commissionManager');
 const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'syntax_dropshipping_secret_key_2024';
@@ -11,7 +12,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'syntax_dropshipping_secret_key_202
 // Register endpoint
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, name, company, verificationCode } = req.body;
+    const { email, password, name, company, verificationCode, referralCode } = req.body;
 
     // Validation
     if (!email || !password || !name || !verificationCode) {
@@ -40,6 +41,27 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'Email is already registered' });
     }
 
+    // Validate referral code if provided
+    let referrerId = null;
+    if (referralCode) {
+      try {
+        const db = require('../config/database');
+        const [referrer] = await db.execute(
+          'SELECT id FROM users WHERE referral_code = ? AND is_active = 1',
+          [referralCode]
+        );
+        
+        if (referrer.length === 0) {
+          return res.status(400).json({ message: 'Invalid referral code' });
+        }
+        
+        referrerId = referrer[0].id;
+      } catch (referralError) {
+        console.error('Referral code validation error:', referralError);
+        return res.status(400).json({ message: 'Invalid referral code' });
+      }
+    }
+
     // Hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
@@ -49,8 +71,27 @@ router.post('/register', async (req, res) => {
       email,
       password: hashedPassword,
       name,
-      company: company || null
+      company: company || null,
+      referred_by: referrerId
     });
+
+    // Generate referral code for new user
+    try {
+      await commissionManager.createReferralCodeForUser(newUser.id);
+    } catch (referralCodeError) {
+      console.error('Error creating referral code for new user:', referralCodeError);
+      // Don't fail registration if referral code creation fails
+    }
+
+    // Establish referral relationship if there's a referrer
+    if (referrerId) {
+      try {
+        await commissionManager.establishReferralRelationship(referralCode, newUser.id);
+      } catch (relationshipError) {
+        console.error('Error establishing referral relationship:', relationshipError);
+        // Don't fail registration if relationship establishment fails
+      }
+    }
 
     // Send welcome email
     try {
@@ -73,7 +114,8 @@ router.post('/register', async (req, res) => {
         id: newUser.id,
         email: newUser.email,
         name: newUser.name,
-        company: newUser.company
+        company: newUser.company,
+        referralCode: referralCode || null // Include referral code used for registration
       }
     });
 

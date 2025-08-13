@@ -1,0 +1,700 @@
+import React, { useState, useEffect } from 'react';
+import { commissionAPI, apiUtils } from '../utils/api';
+import { useTranslation } from '../hooks/useTranslation';
+import WhatsAppButton from '../components/WhatsAppButton';
+
+const CommissionPage = () => {
+  const { t } = useTranslation();
+  const [loading, setLoading] = useState(true);
+  const [account, setAccount] = useState(null);
+  const [referralCode, setReferralCode] = useState('');
+  const [referralLink, setReferralLink] = useState('');
+  const [records, setRecords] = useState([]);
+  const [withdrawals, setWithdrawals] = useState([]);
+  const [referralStats, setReferralStats] = useState(null);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
+  const [withdrawalForm, setWithdrawalForm] = useState({
+    amount: '',
+    method: 'bank_transfer',
+    accountInfo: {
+      bankName: '',
+      accountNumber: '',
+      accountName: '',
+      swiftCode: ''
+    }
+  });
+
+  useEffect(() => {
+    fetchCommissionData();
+  }, []);
+
+  const fetchCommissionData = async () => {
+    try {
+      setLoading(true);
+      
+      // 并行获取所有数据
+      const [
+        accountData,
+        referralData,
+        recordsData,
+        withdrawalsData,
+        statsData
+      ] = await Promise.all([
+        commissionAPI.getAccount(),
+        commissionAPI.getReferralCode(),
+        commissionAPI.getRecords({ limit: 10 }),
+        commissionAPI.getWithdrawals({ limit: 10 }),
+        commissionAPI.getReferralStats()
+      ]);
+
+      setAccount(accountData.data);
+      setReferralCode(referralData.data.referralCode);
+      setReferralLink(referralData.data.referralLink);
+      setRecords(recordsData.data.records);
+      setWithdrawals(withdrawalsData.data.withdrawals);
+      setReferralStats(statsData.data);
+    } catch (error) {
+      console.error('Error fetching commission data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCopyReferralLink = () => {
+    navigator.clipboard.writeText(referralLink);
+    alert('Referral link copied to clipboard!');
+  };
+
+  const handleWithdrawalSubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const withdrawalData = {
+        amount: parseFloat(withdrawalForm.amount),
+        method: withdrawalForm.method,
+        accountInfo: withdrawalForm.accountInfo
+      };
+
+      await commissionAPI.applyWithdrawal(withdrawalData);
+      alert('提现申请提交成功！');
+      setShowWithdrawalModal(false);
+      setWithdrawalForm({
+        amount: '',
+        method: 'bank_transfer',
+        accountInfo: {
+          bankName: '',
+          accountNumber: '',
+          accountName: '',
+          swiftCode: ''
+        }
+      });
+      
+      // 重新获取数据
+      fetchCommissionData();
+    } catch (error) {
+      alert(apiUtils.formatErrorMessage(error));
+    }
+  };
+
+  const formatCurrency = (amount) => {
+    return `$${parseFloat(amount || 0).toFixed(2)}`;
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US');
+  };
+
+  const getStatusText = (status) => {
+    const statusMap = {
+      'pending': 'Pending',
+      'frozen': 'Frozen',
+      'available': 'Available',
+      'paid': 'Paid',
+      'cancelled': 'Cancelled',
+      'processing': 'Processing',
+      'completed': 'Completed',
+      'rejected': 'Rejected'
+    };
+    return statusMap[status] || status;
+  };
+
+  const getStatusColor = (status) => {
+    const colorMap = {
+      'pending': 'text-yellow-600',
+      'frozen': 'text-blue-600',
+      'available': 'text-green-600',
+      'paid': 'text-gray-600',
+      'cancelled': 'text-red-600',
+      'processing': 'text-blue-600',
+      'completed': 'text-green-600',
+      'rejected': 'text-red-600'
+    };
+    return colorMap[status] || 'text-gray-600';
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 pt-20 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">{t('common.loading')}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 pt-20 pb-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mb-8 mt-8">
+          <h1 className="text-3xl font-bold text-gray-900">{t('commission.title')}</h1>
+          <p className="mt-2 text-gray-600">{t('commission.subtitle')}</p>
+        </div>
+
+        {/* 佣金概览卡片 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">{t('commission.availableBalance')}</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {formatCurrency(account?.available_balance)}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Frozen Balance</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {formatCurrency(account?.frozen_balance)}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Earnings</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {formatCurrency(account?.total_earned)}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Referrals</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {account?.total_referrals || 0}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Commission Support */}
+        <div className="bg-green-50 rounded-lg border border-green-200 p-6 mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Need Help with Affiliate?</h3>
+              <p className="text-gray-600 text-sm mb-4">
+                Have questions about your affiliate account, withdrawals, or referral program? Get instant support via WhatsApp.
+              </p>
+            </div>
+            <div className="ml-6">
+              <WhatsAppButton 
+                variant="inline"
+                messageKey="whatsapp.supportMessage"
+                className="whitespace-nowrap"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Tab导航 */}
+        <div className="bg-white rounded-lg shadow mb-8">
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex space-x-8 px-6">
+              {[
+                { id: 'overview', name: 'Overview', icon: '📊' },
+                { id: 'referral', name: 'Referral Management', icon: '👥' },
+                { id: 'records', name: 'Commission Records', icon: '📋' },
+                { id: 'withdrawals', name: 'Withdrawal Records', icon: '💰' }
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === tab.id
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <span className="mr-2">{tab.icon}</span>
+                  {tab.name}
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          <div className="p-6">
+            {/* 概览标签页 */}
+            {activeTab === 'overview' && (
+              <div>
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-lg font-medium text-gray-900">Account Overview</h3>
+                  <button
+                    onClick={() => setShowWithdrawalModal(true)}
+                    disabled={!account?.available_balance || parseFloat(account.available_balance) <= 0}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  >
+                    Apply Withdrawal
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h4 className="font-medium text-gray-900 mb-4">Recent Commission Records</h4>
+                    <div className="space-y-3">
+                      {records.slice(0, 5).map((record) => (
+                        <div key={record.id} className="flex justify-between items-center">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">
+                              Order #{record.order_number}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {formatDate(record.created_at)}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-medium text-green-600">
+                              +{formatCurrency(record.commission_amount)}
+                            </p>
+                            <p className={`text-xs ${getStatusColor(record.status)}`}>
+                              {getStatusText(record.status)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                      {records.length === 0 && (
+                        <p className="text-gray-500 text-center py-4">No commission records yet</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-lg p-4">
+                                                <h4 className="font-medium text-gray-900 mb-4">Referral Statistics</h4>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Total Referrals</span>
+                        <span className="font-medium">{referralStats?.referrals?.length || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Active Users</span>
+                        <span className="font-medium">{account?.active_referrals || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Total Commissions</span>
+                        <span className="font-medium">{referralStats?.commissionStats?.total_commissions || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Withdrawn Amount</span>
+                        <span className="font-medium">{formatCurrency(account?.total_withdrawn)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 推荐管理标签页 */}
+            {activeTab === 'referral' && (
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-6">Referral Management</h3>
+                
+                <div className="bg-gray-50 rounded-lg p-6 mb-6">
+                  <h4 className="font-medium text-gray-900 mb-4">My Referral Link</h4>
+                  <div className="flex items-center space-x-4">
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        value={referralLink}
+                        readOnly
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white"
+                      />
+                    </div>
+                    <button
+                      onClick={handleCopyReferralLink}
+                      className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                    >
+                      Copy Link
+                    </button>
+                  </div>
+                  <p className="mt-2 text-sm text-gray-600">
+                    Referral Code: <span className="font-mono font-medium">{referralCode}</span>
+                  </p>
+                </div>
+
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-4">Referred Users List</h4>
+                  <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            User Info
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Registration Time
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Order Count
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Total Orders
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {referralStats?.referrals?.map((referral) => (
+                          <tr key={referral.id}>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div>
+                                <div className="text-sm font-medium text-gray-900">
+                                  {referral.name}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  {referral.email}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {formatDate(referral.created_at)}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {referral.order_count}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {formatCurrency(referral.total_order_amount)}
+                            </td>
+                          </tr>
+                        ))}
+                        {(!referralStats?.referrals || referralStats.referrals.length === 0) && (
+                          <tr>
+                            <td colSpan={4} className="px-6 py-4 text-center text-gray-500">
+                              No referred users yet
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 佣金记录标签页 */}
+            {activeTab === 'records' && (
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-6">Commission Records</h3>
+                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Order Info
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Order Amount
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Commission Amount
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Time
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {records.map((record) => (
+                        <tr key={record.id}>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">
+                                #{record.order_number}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                来自: {record.referee_name}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {formatCurrency(record.order_amount)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
+                            {formatCurrency(record.commission_amount)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`text-sm ${getStatusColor(record.status)}`}>
+                              {getStatusText(record.status)}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {formatDate(record.created_at)}
+                          </td>
+                        </tr>
+                      ))}
+                      {records.length === 0 && (
+                        <tr>
+                          <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
+                            No commission records yet
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* 提现记录标签页 */}
+            {activeTab === 'withdrawals' && (
+              <div>
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-lg font-medium text-gray-900">Withdrawal Records</h3>
+                  <button
+                    onClick={() => setShowWithdrawalModal(true)}
+                    disabled={!account?.available_balance || parseFloat(account.available_balance) <= 0}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  >
+                    Apply Withdrawal
+                  </button>
+                </div>
+
+                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Withdrawal Number
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Amount
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Method
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Applied Time
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {withdrawals.map((withdrawal) => (
+                        <tr key={withdrawal.id}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {withdrawal.withdrawal_number}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {formatCurrency(withdrawal.amount)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {withdrawal.method === 'bank_transfer' ? 'Bank Transfer' : 
+                             withdrawal.method === 'paypal' ? 'PayPal' :
+                             withdrawal.method === 'alipay' ? 'Alipay' : 'WeChat Pay'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`text-sm ${getStatusColor(withdrawal.status)}`}>
+                              {getStatusText(withdrawal.status)}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {formatDate(withdrawal.applied_at)}
+                          </td>
+                        </tr>
+                      ))}
+                      {withdrawals.length === 0 && (
+                        <tr>
+                          <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
+                            No withdrawal records yet
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 提现申请模态框 */}
+      {showWithdrawalModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Apply Withdrawal</h3>
+              <button
+                onClick={() => setShowWithdrawalModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={handleWithdrawalSubmit}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Withdrawal Amount
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="10"
+                  max={account?.available_balance || 0}
+                  value={withdrawalForm.amount}
+                  onChange={(e) => setWithdrawalForm({...withdrawalForm, amount: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter withdrawal amount"
+                  required
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Available balance: {formatCurrency(account?.available_balance)}
+                </p>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Withdrawal Method
+                </label>
+                <select
+                  value={withdrawalForm.method}
+                  onChange={(e) => setWithdrawalForm({...withdrawalForm, method: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="bank_transfer">Bank Transfer</option>
+                  <option value="paypal">PayPal</option>
+                  <option value="alipay">Alipay</option>
+                  <option value="wechat">WeChat Pay</option>
+                </select>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Account Information
+                </label>
+                {withdrawalForm.method === 'bank_transfer' && (
+                  <div className="space-y-3">
+                    <input
+                      type="text"
+                      placeholder="Bank Name"
+                      value={withdrawalForm.accountInfo.bankName}
+                      onChange={(e) => setWithdrawalForm({
+                        ...withdrawalForm,
+                        accountInfo: {...withdrawalForm.accountInfo, bankName: e.target.value}
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      required
+                    />
+                    <input
+                      type="text"
+                      placeholder="Account Number"
+                      value={withdrawalForm.accountInfo.accountNumber}
+                      onChange={(e) => setWithdrawalForm({
+                        ...withdrawalForm,
+                        accountInfo: {...withdrawalForm.accountInfo, accountNumber: e.target.value}
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      required
+                    />
+                    <input
+                      type="text"
+                      placeholder="Account Name"
+                      value={withdrawalForm.accountInfo.accountName}
+                      onChange={(e) => setWithdrawalForm({
+                        ...withdrawalForm,
+                        accountInfo: {...withdrawalForm.accountInfo, accountName: e.target.value}
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      required
+                    />
+                  </div>
+                )}
+                {withdrawalForm.method !== 'bank_transfer' && (
+                  <input
+                    type="text"
+                    placeholder={`Enter ${
+                      withdrawalForm.method === 'paypal' ? 'PayPal Email' :
+                      withdrawalForm.method === 'alipay' ? 'Alipay Account' : 'WeChat ID'
+                    }`}
+                    value={withdrawalForm.accountInfo.accountNumber}
+                    onChange={(e) => setWithdrawalForm({
+                      ...withdrawalForm,
+                      accountInfo: {...withdrawalForm.accountInfo, accountNumber: e.target.value}
+                    })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    required
+                  />
+                )}
+              </div>
+
+              <div className="flex space-x-4">
+                <button
+                  type="button"
+                  onClick={() => setShowWithdrawalModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  Submit Application
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default CommissionPage;

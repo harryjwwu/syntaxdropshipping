@@ -7,18 +7,26 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
 import LoadingSpinner from './components/LoadingSpinner';
+import DashboardLayout from './components/DashboardLayout';
 
 // Pages
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ServicesPage from './pages/ServicesPage';
-import ProductsPage from './pages/ProductsPage';
 import ContactPage from './pages/ContactPage';
 import ProfilePage from './pages/ProfilePage';
+import CommissionPage from './pages/CommissionPage';
+
+// Dashboard Pages
+import DashboardPage from './pages/DashboardPage';
+import AffiliatePage from './pages/AffiliatePage';
+import OrdersPage from './pages/OrdersPage';
+import DepositPage from './pages/DepositPage';
 
 // Context
 import { AuthProvider } from './context/AuthContext';
+import { LanguageProvider } from './context/LanguageContext';
 
 // Utils
 import { authAPI } from './utils/api';
@@ -54,8 +62,9 @@ function App() {
   }
 
   return (
-    <AuthProvider initialUser={user}>
-      <Router>
+    <LanguageProvider>
+      <AuthProvider initialUser={user}>
+        <Router>
         <div className="App min-h-screen bg-gray-50">
           {/* Toast notifications */}
           <Toaster 
@@ -83,30 +92,79 @@ function App() {
             }}
           />
 
-          {/* Navigation */}
-          <Navbar />
-          
           {/* Scroll to top component */}
           <ScrollToTop />
           
           {/* Main content */}
           <main className="min-h-screen">
             <Routes>
-              <Route path="/" element={<HomePage />} />
+              {/* Public routes with traditional layout */}
+              <Route path="/" element={
+                <>
+                  <Navbar />
+                  <HomePage />
+                  <Footer />
+                </>
+              } />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
-              <Route path="/services" element={<ServicesPage />} />
-              <Route path="/products" element={<ProductsPage />} />
-              <Route path="/contact" element={<ContactPage />} />
-              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/services" element={
+                <>
+                  <Navbar />
+                  <ServicesPage />
+                  <Footer />
+                </>
+              } />
+              <Route path="/contact" element={
+                <>
+                  <Navbar />
+                  <ContactPage />
+                  <Footer />
+                </>
+              } />
+
+              {/* Dashboard routes with new layout */}
+              <Route path="/dashboard" element={
+                <DashboardLayout>
+                  <DashboardPage />
+                </DashboardLayout>
+              } />
+              <Route path="/affiliate" element={
+                <DashboardLayout>
+                  <AffiliatePage />
+                </DashboardLayout>
+              } />
+              <Route path="/orders" element={
+                <DashboardLayout>
+                  <OrdersPage />
+                </DashboardLayout>
+              } />
+              <Route path="/deposit" element={
+                <DashboardLayout>
+                  <DepositPage />
+                </DashboardLayout>
+              } />
+
+              <Route path="/profile" element={
+                <DashboardLayout>
+                  <ProfilePage />
+                </DashboardLayout>
+              } />
+
+              {/* Legacy routes for backward compatibility */}
+              <Route path="/commission" element={
+                <>
+                  <Navbar />
+                  <CommissionPage />
+                  <Footer />
+                </>
+              } />
             </Routes>
           </main>
-
-          {/* Footer */}
-          <Footer />
         </div>
-      </Router>
-    </AuthProvider>
+        </Router>
+      </AuthProvider>
+    </LanguageProvider>
   );
 }
 

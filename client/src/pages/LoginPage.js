@@ -4,7 +4,8 @@ import { useForm } from 'react-hook-form';
 import { Eye, EyeOff, Mail, Lock, Package, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { InlineSpinner } from '../components/LoadingSpinner';
-import toast from 'react-hot-toast';
+
+import WhatsAppButton from '../components/WhatsAppButton';
 
 const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -21,7 +22,7 @@ const LoginPage = () => {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      const from = location.state?.from?.pathname || '/';
+      const from = location.state?.from?.pathname || '/dashboard';
       navigate(from, { replace: true });
     }
   }, [isAuthenticated, navigate, location]);
@@ -29,7 +30,7 @@ const LoginPage = () => {
   const onSubmit = async (data) => {
     try {
       await login(data);
-      const from = location.state?.from?.pathname || '/';
+      const from = location.state?.from?.pathname || '/dashboard';
       navigate(from, { replace: true });
     } catch (error) {
       // Error is handled in AuthContext
@@ -197,8 +198,18 @@ const LoginPage = () => {
           </div>
         </div>
 
-        {/* Back to Home */}
+        {/* Need Help Section */}
         <div className="mt-8 text-center">
+          <div className="text-white/90 text-sm mb-4">Need help with login?</div>
+          <WhatsAppButton 
+            variant="inline"
+            messageKey="whatsapp.supportMessage"
+            className="mb-4"
+          />
+        </div>
+
+        {/* Back to Home */}
+        <div className="mt-4 text-center">
           <Link
             to="/"
             className="text-white/90 hover:text-white transition-colors inline-flex items-center gap-2"

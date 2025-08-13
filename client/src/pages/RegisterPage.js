@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { Eye, EyeOff, Mail, Lock, User, Building, Package, ArrowRight, Shield, Clock } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, Building, Package, ArrowRight, Shield, Clock, Users } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { InlineSpinner } from '../components/LoadingSpinner';
-import { verificationAPI } from '../utils/api';
+import { verificationAPI, commissionAPI } from '../utils/api';
+import WhatsAppButton from '../components/WhatsAppButton';
 import toast from 'react-hot-toast';
 
 const RegisterPage = () => {
@@ -14,8 +15,12 @@ const RegisterPage = () => {
   const [isCodeSent, setIsCodeSent] = useState(false);
   const [isSendingCode, setIsSendingCode] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [referralCode, setReferralCode] = useState('');
+  const [referralInfo, setReferralInfo] = useState(null);
+  const [isValidatingReferral, setIsValidatingReferral] = useState(false);
   const { register: registerUser, loading, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const {
     register,
@@ -26,6 +31,15 @@ const RegisterPage = () => {
 
   const watchPassword = watch('password');
   const watchEmail = watch('email');
+
+  // Check for referral code in URL and validate it
+  useEffect(() => {
+    const refCode = searchParams.get('ref');
+    if (refCode) {
+      setReferralCode(refCode);
+      validateReferralCode(refCode);
+    }
+  }, [searchParams]);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -46,6 +60,48 @@ const RegisterPage = () => {
     }
     return () => clearInterval(interval);
   }, [countdown]);
+
+  // Validate referral code
+  const validateReferralCode = async (code) => {
+    if (!code) {
+      setReferralInfo(null);
+      return;
+    }
+
+    try {
+      setIsValidatingReferral(true);
+      const response = await commissionAPI.validateReferral(code);
+      if (response.success) {
+        setReferralInfo(response.data.referrer);
+        toast.success(`推荐人: ${response.data.referrer.name}`, {
+          duration: 3000
+        });
+      }
+    } catch (error) {
+      console.error('Referral validation error:', error);
+      setReferralInfo(null);
+      toast.error('推荐码无效或已过期');
+      // Don't clear the referral code, let user try again
+    } finally {
+      setIsValidatingReferral(false);
+    }
+  };
+
+  // Handle referral code input change
+  const handleReferralCodeChange = (e) => {
+    const code = e.target.value.toUpperCase();
+    setReferralCode(code);
+    
+    // Validate after user stops typing for 500ms
+    clearTimeout(window.referralValidationTimeout);
+    window.referralValidationTimeout = setTimeout(() => {
+      if (code) {
+        validateReferralCode(code);
+      } else {
+        setReferralInfo(null);
+      }
+    }, 500);
+  };
 
   // Send verification code
   const sendVerificationCode = async () => {
@@ -98,8 +154,11 @@ const RegisterPage = () => {
 
     try {
       const { confirmPassword, ...registerData } = data;
-      // Include verification code in registration data
+      // Include verification code and referral code in registration data
       registerData.verificationCode = verificationCode;
+      if (referralCode) {
+        registerData.referralCode = referralCode;
+      }
       await registerUser(registerData);
       navigate('/', { replace: true });
     } catch (error) {
@@ -275,6 +334,58 @@ const RegisterPage = () => {
               </div>
             </div>
 
+            {/* Referral Code Field (Optional) */}
+            <div>
+              <label htmlFor="referralCode" className="block text-sm font-medium text-gray-700 mb-2">
+                Referral Code <span className="text-gray-400 text-sm">(Optional)</span>
+                {referralInfo && (
+                  <span className="text-green-600 text-sm ml-2">
+                    ✓ Valid - Referred by {referralInfo.name}
+                  </span>
+                )}
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Users className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="referralCode"
+                  type="text"
+                  className={`input-field pl-10 pr-10 ${referralInfo ? 'border-green-500 bg-green-50' : ''}`}
+                  placeholder="Enter referral code"
+                  value={referralCode}
+                  onChange={handleReferralCodeChange}
+                />
+                {isValidatingReferral && (
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-600"></div>
+                  </div>
+                )}
+              </div>
+              {referralInfo && (
+                <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-md">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-green-800">
+                        Valid referral code
+                      </p>
+                      <p className="text-sm text-green-700">
+                        You'll be referred by <strong>{referralInfo.name}</strong> ({referralInfo.email})
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <p className="mt-1 text-sm text-gray-500">
+                Have a referral code? Enter it to connect with your referrer and earn benefits.
+              </p>
+            </div>
+
             {/* Password Field */}
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
@@ -426,8 +537,18 @@ const RegisterPage = () => {
           </div>
         </div>
 
-        {/* Back to Home */}
+        {/* Need Help Section */}
         <div className="mt-8 text-center">
+          <div className="text-white/90 text-sm mb-4">Need help with registration?</div>
+          <WhatsAppButton 
+            variant="inline"
+            messageKey="whatsapp.supportMessage"
+            className="mb-4"
+          />
+        </div>
+
+        {/* Back to Home */}
+        <div className="mt-4 text-center">
           <Link
             to="/"
             className="text-white/90 hover:text-white transition-colors inline-flex items-center gap-2"
