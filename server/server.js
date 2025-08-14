@@ -12,6 +12,7 @@ const productRoutes = require('./routes/products');
 const verificationRoutes = require('./routes/verification');
 const commissionRoutes = require('./routes/commission');
 const orderRoutes = require('./routes/ordersFixed');
+const adminRoutes = require('./routes/admin');
 const walletRoutes = require('./routes/wallet');
 
 // Import database
@@ -44,7 +45,7 @@ app.use('/api/verification/send-code', verificationLimiter);
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
     ? ['https://syntaxdropshipping.com'] 
-    : ['http://localhost:3000'],
+    : ['http://localhost:3000', 'http://localhost:3002'],
   credentials: true
 }));
 
@@ -62,7 +63,12 @@ app.use('/api/products', productRoutes);
 app.use('/api/verification', verificationRoutes);
 app.use('/api/commission', commissionRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api/wallet', walletRoutes);
+
+// Settings routes
+const settingsRoutes = require('./routes/settings');
+app.use('/api/settings', settingsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

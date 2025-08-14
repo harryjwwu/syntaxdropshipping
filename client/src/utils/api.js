@@ -131,6 +131,24 @@ export const commissionAPI = {
   validateReferral: (code) => api.get(`/commission/validate-referral/${code}`)
 };
 
+// Admin API
+export const adminAPI = {
+  // 管理员登录
+  login: (credentials) => api.post('/admin/login', credentials),
+  
+  // 获取充值单列表
+  getDeposits: (params = {}) => api.get('/admin/deposits', { params }),
+  
+  // 获取充值单详情
+  getDeposit: (id) => api.get(`/admin/deposits/${id}`),
+  
+  // 审核充值单
+  reviewDeposit: (id, reviewData) => api.put(`/admin/deposits/${id}/review`, reviewData),
+  
+  // 获取管理员统计
+  getDashboardStats: () => api.get('/admin/dashboard/stats')
+};
+
 // Wallet API
 export const walletAPI = {
   // 获取钱包余额
@@ -138,6 +156,12 @@ export const walletAPI = {
   
   // 获取系统银行账户信息
   getBankInfo: (currency = 'USD') => api.get(`/wallet/bank-info?currency=${currency}`),
+  
+  // 获取PayPal支付信息
+  getPayPalInfo: () => api.get('/wallet/paypal-info'),
+  
+  // 获取OTHERS货币提示信息
+  getOthersTooltip: () => api.get('/wallet/others-currency-tooltip'),
   
   // 创建充值记录
   createDeposit: (depositData) => {
@@ -174,6 +198,11 @@ export const walletAPI = {
 // Health check
 export const healthAPI = {
   check: () => api.get('/health')
+};
+
+// 系统设置相关API (公共)
+export const settingsAPI = {
+  getCommissionRules: () => api.get('/settings/commission/rules')
 };
 
 // Utility functions

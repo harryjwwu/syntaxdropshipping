@@ -274,12 +274,80 @@ class WalletManager {
     try {
       const db = await getConnection();
       
-      const [accounts] = await db.execute(
-        'SELECT * FROM system_bank_accounts WHERE currency = ? AND is_active = 1 LIMIT 1',
-        [currency]
+      // 根据货币类型确定设置键名
+      let settingKey;
+      if (currency.toLowerCase() === 'usd') {
+        settingKey = 'payment_usd_bank_transfer';
+      } else if (currency.toLowerCase() === 'eur') {
+        settingKey = 'payment_eur_bank_transfer';
+      } else {
+        // 默认返回USD信息
+        settingKey = 'payment_usd_bank_transfer';
+      }
+      
+      const [settings] = await db.execute(
+        'SELECT setting_value FROM system_settings WHERE setting_key = ? AND is_active = 1 LIMIT 1',
+        [settingKey]
       );
 
-      return accounts[0] || null;
+      if (settings.length === 0) {
+        return null;
+      }
+
+      // 解析JSON格式的设置值
+      const paymentInfo = JSON.parse(settings[0].setting_value);
+      
+      // 检查是否启用
+      if (!paymentInfo.is_enabled) {
+        return null;
+      }
+
+      // 转换为前端期望的格式
+      let bankAccount;
+      
+      if (currency.toLowerCase() === 'usd') {
+        bankAccount = {
+          account_number: paymentInfo.account_number,
+          holder_name: paymentInfo.holder_name,
+          support_currency: paymentInfo.support_currency || paymentInfo.currency,
+          bank: paymentInfo.bank,
+          bank_country_region: paymentInfo.bank_country_region,
+          bank_address: paymentInfo.bank_address,
+          account_type: paymentInfo.account_type,
+          swift_code: paymentInfo.swift_code,
+          wire_routing_number: paymentInfo.wire_routing_number,
+          ach_routing_number: paymentInfo.ach_routing_number,
+          swift_bic: paymentInfo.swift_bic
+        };
+      } else if (currency.toLowerCase() === 'eur') {
+        bankAccount = {
+          account_number_iban: paymentInfo.account_number_iban,
+          holder_name: paymentInfo.holder_name,
+          support_currency: paymentInfo.support_currency || paymentInfo.currency,
+          bank: paymentInfo.bank,
+          bank_country_region: paymentInfo.bank_country_region,
+          bank_address: paymentInfo.bank_address,
+          account_type: paymentInfo.account_type,
+          swift_bic: paymentInfo.swift_bic
+        };
+      } else {
+        // 默认USD格式
+        bankAccount = {
+          account_number: paymentInfo.account_number,
+          holder_name: paymentInfo.holder_name,
+          support_currency: paymentInfo.support_currency || paymentInfo.currency,
+          bank: paymentInfo.bank,
+          bank_country_region: paymentInfo.bank_country_region,
+          bank_address: paymentInfo.bank_address,
+          account_type: paymentInfo.account_type,
+          swift_code: paymentInfo.swift_code,
+          wire_routing_number: paymentInfo.wire_routing_number,
+          ach_routing_number: paymentInfo.ach_routing_number,
+          swift_bic: paymentInfo.swift_bic
+        };
+      }
+
+      return bankAccount;
     } catch (error) {
       console.error('Error getting system bank account:', error);
       throw error;

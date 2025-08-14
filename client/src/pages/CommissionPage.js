@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { commissionAPI, apiUtils } from '../utils/api';
+import { commissionAPI, settingsAPI, apiUtils } from '../utils/api';
 import { useTranslation } from '../hooks/useTranslation';
 import WhatsAppButton from '../components/WhatsAppButton';
 
 const CommissionPage = () => {
+  console.log('CommissionPage component rendered');
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [account, setAccount] = useState(null);
@@ -12,6 +13,7 @@ const CommissionPage = () => {
   const [records, setRecords] = useState([]);
   const [withdrawals, setWithdrawals] = useState([]);
   const [referralStats, setReferralStats] = useState(null);
+  const [commissionRules, setCommissionRules] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
   const [withdrawalForm, setWithdrawalForm] = useState({
@@ -26,10 +28,35 @@ const CommissionPage = () => {
   });
 
   useEffect(() => {
+    console.log('=== CommissionPage useEffect called ===');
+    
+    // 简单测试
+    const simpleTest = async () => {
+      console.log('Starting simple test...');
+      console.log('settingsAPI:', settingsAPI);
+      
+      if (settingsAPI && settingsAPI.getCommissionRules) {
+        console.log('settingsAPI.getCommissionRules exists');
+        try {
+          console.log('Making API call...');
+          const result = await settingsAPI.getCommissionRules();
+          console.log('API call success:', result);
+          setCommissionRules(result.data);
+        } catch (error) {
+          console.error('API call failed:', error);
+        }
+      } else {
+        console.error('settingsAPI or getCommissionRules not found');
+      }
+    };
+    
+    simpleTest();
     fetchCommissionData();
   }, []);
 
   const fetchCommissionData = async () => {
+    console.log('fetchCommissionData called');
+    console.log('settingsAPI:', settingsAPI);
     try {
       setLoading(true);
       
@@ -54,6 +81,25 @@ const CommissionPage = () => {
       setRecords(recordsData.data.records);
       setWithdrawals(withdrawalsData.data.withdrawals);
       setReferralStats(statsData.data);
+      
+      // 单独获取佣金规则，避免影响其他数据
+      console.log('About to call settingsAPI.getCommissionRules()');
+      try {
+        console.log('Calling settingsAPI.getCommissionRules()...');
+        const rulesData = await settingsAPI.getCommissionRules();
+        console.log('API call completed');
+        console.log('Commission Rules Raw Response:', rulesData);
+        console.log('Commission Rules Data:', rulesData.data);
+        setCommissionRules(rulesData.data);
+      } catch (rulesError) {
+        console.error('Error fetching commission rules:', rulesError);
+        // 设置默认值
+        setCommissionRules({
+          first_level_rate: 2.0,
+          description: '只支持一层推荐返佣：一级返佣 2%\nA 推荐 B → B 下单后支付金额的 2% 给 A\nB 推荐 C → C 下单后支付金额的 2% 给 B，C的付款金额不与A关联',
+          is_enabled: true
+        });
+      }
     } catch (error) {
       console.error('Error fetching commission data:', error);
     } finally {
@@ -331,6 +377,36 @@ const CommissionPage = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* 佣金规则展示 */}
+                <div className="mt-6 bg-red-100 border border-red-200 rounded-lg p-4">
+                  <p className="text-red-800">测试区域</p>
+                  <p className="text-red-600">commissionRules: {commissionRules ? '已加载' : '未加载'}</p>
+                  <p className="text-red-600">is_enabled: {commissionRules?.is_enabled ? '启用' : '未启用'}</p>
+                  <p className="text-red-600">rate: {commissionRules?.first_level_rate || 'N/A'}%</p>
+                </div>
+                
+                {commissionRules && (
+                  <div className="mt-6 bg-purple-50 border border-purple-200 rounded-lg p-6">
+                    <div className="flex items-center mb-4">
+                      <div className="p-2 bg-purple-100 rounded-lg mr-3">
+                        <svg className="h-5 w-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h4 className="text-lg font-medium text-purple-800">Commission Rules</h4>
+                        <p className="text-sm text-purple-600">Current referral commission rate: <span className="font-bold">{commissionRules.first_level_rate}%</span></p>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-white border border-purple-200 rounded-lg p-4">
+                      <div className="text-sm text-purple-700 whitespace-pre-line leading-relaxed">
+                        {commissionRules.description}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

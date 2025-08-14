@@ -10,6 +10,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import Tooltip from '../components/Tooltip';
 
 const DepositPage = () => {
   const [selectedCurrency, setSelectedCurrency] = useState('USD');
@@ -17,21 +18,48 @@ const DepositPage = () => {
   const [amount, setAmount] = useState('');
   const [paymentSlip, setPaymentSlip] = useState(null);
   const [bankInfo, setBankInfo] = useState(null);
+  const [paypalInfo, setPaypalInfo] = useState(null);
+  const [othersTooltip, setOthersTooltip] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showBankInfo, setShowBankInfo] = useState(false);
+  const [showPayPalInfo, setShowPayPalInfo] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // 加载银行信息
-    loadBankInfo();
+    // 加载银行信息和PayPal信息
+    loadPaymentInfo();
   }, [selectedCurrency]);
 
-  const loadBankInfo = async () => {
+  useEffect(() => {
+    // 加载OTHERS货币提示信息
+    loadOthersTooltip();
+  }, []);
+
+  const loadOthersTooltip = async () => {
     try {
-      const response = await walletAPI.getBankInfo(selectedCurrency);
-      setBankInfo(response.data);
+      const response = await walletAPI.getOthersTooltip();
+      setOthersTooltip(response.data);
     } catch (error) {
-      console.error('Error loading bank info:', error);
+      console.error('Error loading others tooltip:', error);
+      // 设置默认提示信息
+      setOthersTooltip({
+        message: '如需其他币种，请联系我们',
+        is_enabled: true
+      });
+    }
+  };
+
+  const loadPaymentInfo = async () => {
+    try {
+      // 加载银行信息
+      const bankResponse = await walletAPI.getBankInfo(selectedCurrency);
+      setBankInfo(bankResponse.data);
+      
+      // 加载PayPal信息
+      const paypalResponse = await walletAPI.getPayPalInfo();
+      setPaypalInfo(paypalResponse.data);
+    } catch (error) {
+      console.error('Error loading payment info:', error);
     }
   };
 
@@ -70,9 +98,10 @@ const DepositPage = () => {
     
     if (selectedPaymentMethod === 'bank_transfer') {
       setShowBankInfo(true);
+    } else if (selectedPaymentMethod === 'paypal') {
+      setShowPayPalInfo(true);
     } else {
-      // For PayPal, you might redirect to PayPal or show PayPal info
-      toast.info('PayPal payment will be implemented soon');
+      toast.info('This payment method will be implemented soon');
     }
   };
 
@@ -89,7 +118,8 @@ const DepositPage = () => {
         amount: parseFloat(amount),
         paymentMethod: selectedPaymentMethod,
         paymentSlip,
-        bankInfo: selectedPaymentMethod === 'bank_transfer' ? bankInfo : null
+        bankInfo: selectedPaymentMethod === 'bank_transfer' ? bankInfo : null,
+        paypalInfo: selectedPaymentMethod === 'paypal' ? paypalInfo : null
       };
 
       const response = await walletAPI.createDeposit(depositData);
@@ -133,6 +163,133 @@ const DepositPage = () => {
     }
   ];
 
+  // PayPal信息显示页面
+  if (showPayPalInfo) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        {/* Header */}
+        <div className="bg-white shadow">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center py-4">
+              <button
+                onClick={() => setShowPayPalInfo(false)}
+                className="flex items-center text-gray-600 hover:text-gray-900"
+              >
+                <ArrowLeft className="w-5 h-5 mr-2" />
+                Back to Payment
+              </button>
+              <h1 className="text-xl font-semibold text-gray-900">PayPal Payment Information</h1>
+              <div className="w-20"></div>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-4xl mx-auto p-6">
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">
+              Here is our PayPal account information
+            </h2>
+
+            {/* PayPal Account Information Table */}
+            {paypalInfo && (
+              <div className="overflow-x-auto mb-6">
+                <table className="w-full border-collapse border border-gray-300">
+                  <tbody>
+                    <tr>
+                      <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Account Number</td>
+                      <td className="border border-gray-300 px-4 py-3">{paypalInfo.account_number}</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">The name</td>
+                      <td className="border border-gray-300 px-4 py-3">{paypalInfo.the_name}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Transfer Summary */}
+            <div className="bg-blue-50 rounded-lg p-6 mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Submit Payment Confirmation</h3>
+              
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <span className="text-sm text-gray-600">Total Amount:</span>
+                  <div className="text-lg font-semibold">{amount} USD</div>
+                </div>
+                <div>
+                  <span className="text-sm text-gray-600">You Need To Pay:</span>
+                  <div className="text-lg font-semibold">{amount} USD</div>
+                </div>
+              </div>
+
+              {/* File Upload */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Upload Payment Confirmation*
+                </label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                  <input
+                    type="file"
+                    onChange={handleFileChange}
+                    accept=".jpg,.jpeg,.png,.pdf"
+                    className="hidden"
+                    id="paypal-slip-upload"
+                  />
+                  <label
+                    htmlFor="paypal-slip-upload"
+                    className="cursor-pointer flex flex-col items-center"
+                  >
+                    {paymentSlip ? (
+                      <div className="flex items-center text-green-600">
+                        <CheckCircle className="w-8 h-8 mb-2" />
+                        <span className="ml-2">{paymentSlip.name}</span>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                        <span className="text-sm text-gray-600">
+                          Click to upload your PayPal payment screenshot
+                        </span>
+                      </>
+                    )}
+                  </label>
+                </div>
+              </div>
+
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                <div className="flex">
+                  <AlertCircle className="w-5 h-5 text-red-400 mt-0.5" />
+                  <div className="ml-3 text-sm text-red-700">
+                    Please send the payment to the PayPal account above and upload a screenshot 
+                    of the successful payment confirmation.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={() => setShowPayPalInfo(false)}
+                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitDeposit}
+                disabled={loading || !paymentSlip}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Submitting...' : 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (showBankInfo) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -164,46 +321,143 @@ const DepositPage = () => {
               <div className="overflow-x-auto mb-6">
                 <table className="w-full border-collapse border border-gray-300">
                   <tbody>
-                    <tr>
-                      <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Account Number</td>
-                      <td className="border border-gray-300 px-4 py-3">{bankInfo.account_number}</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Holder Name</td>
-                      <td className="border border-gray-300 px-4 py-3">{bankInfo.account_name}</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Support Currency</td>
-                      <td className="border border-gray-300 px-4 py-3">{bankInfo.currency}</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Bank</td>
-                      <td className="border border-gray-300 px-4 py-3">{bankInfo.bank_name}</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Location Country</td>
-                      <td className="border border-gray-300 px-4 py-3">{bankInfo.country}</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Bank Address</td>
-                      <td className="border border-gray-300 px-4 py-3">{bankInfo.bank_address}</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Account Type</td>
-                      <td className="border border-gray-300 px-4 py-3">Business Account</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Swift Code</td>
-                      <td className="border border-gray-300 px-4 py-3">{bankInfo.swift_code}</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Bank Code/Routing Number</td>
-                      <td className="border border-gray-300 px-4 py-3">{bankInfo.routing_number}</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Branch Code</td>
-                      <td className="border border-gray-300 px-4 py-3">{bankInfo.branch_code}</td>
-                    </tr>
+                    {/* USD Bank Transfer Fields */}
+                    {selectedCurrency === 'USD' && (
+                      <>
+                        <tr>
+                          <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Account Number</td>
+                          <td className="border border-gray-300 px-4 py-3">{bankInfo.account_number}</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Holder Name</td>
+                          <td className="border border-gray-300 px-4 py-3">{bankInfo.holder_name}</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Support Currency</td>
+                          <td className="border border-gray-300 px-4 py-3">{bankInfo.support_currency}</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Bank</td>
+                          <td className="border border-gray-300 px-4 py-3">{bankInfo.bank}</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Bank Country/Region</td>
+                          <td className="border border-gray-300 px-4 py-3">{bankInfo.bank_country_region}</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Bank Address</td>
+                          <td className="border border-gray-300 px-4 py-3">{bankInfo.bank_address}</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Account Type</td>
+                          <td className="border border-gray-300 px-4 py-3">{bankInfo.account_type}</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Swift Code</td>
+                          <td className="border border-gray-300 px-4 py-3">{bankInfo.swift_code}</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Wire Routing Number</td>
+                          <td className="border border-gray-300 px-4 py-3">{bankInfo.wire_routing_number}</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Ach Routing Number</td>
+                          <td className="border border-gray-300 px-4 py-3">{bankInfo.ach_routing_number}</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">SWIFT/BIC</td>
+                          <td className="border border-gray-300 px-4 py-3">{bankInfo.swift_bic}</td>
+                        </tr>
+                      </>
+                    )}
+                    
+                    {/* EUR Bank Transfer Fields */}
+                    {selectedCurrency === 'EUR' && (
+                      <>
+                        <tr>
+                          <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Account Number/IBAN</td>
+                          <td className="border border-gray-300 px-4 py-3">{bankInfo.account_number_iban}</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Holder Name</td>
+                          <td className="border border-gray-300 px-4 py-3">{bankInfo.holder_name}</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Support Currency</td>
+                          <td className="border border-gray-300 px-4 py-3">{bankInfo.support_currency}</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Bank</td>
+                          <td className="border border-gray-300 px-4 py-3">{bankInfo.bank}</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Bank Country/Region</td>
+                          <td className="border border-gray-300 px-4 py-3">{bankInfo.bank_country_region}</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Bank Address</td>
+                          <td className="border border-gray-300 px-4 py-3">{bankInfo.bank_address}</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Account Type</td>
+                          <td className="border border-gray-300 px-4 py-3">{bankInfo.account_type}</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">SWIFT/BIC</td>
+                          <td className="border border-gray-300 px-4 py-3">{bankInfo.swift_bic}</td>
+                        </tr>
+                      </>
+                    )}
+                    
+                    {/* OTHERS Currency - Default to USD format */}
+                    {selectedCurrency === 'OTHERS' && (
+                      <>
+                        <tr>
+                          <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Account Number</td>
+                          <td className="border border-gray-300 px-4 py-3">{bankInfo.account_number}</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Holder Name</td>
+                          <td className="border border-gray-300 px-4 py-3">{bankInfo.holder_name}</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Support Currency</td>
+                          <td className="border border-gray-300 px-4 py-3">{bankInfo.support_currency}</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Bank</td>
+                          <td className="border border-gray-300 px-4 py-3">{bankInfo.bank}</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Bank Country/Region</td>
+                          <td className="border border-gray-300 px-4 py-3">{bankInfo.bank_country_region}</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Bank Address</td>
+                          <td className="border border-gray-300 px-4 py-3">{bankInfo.bank_address}</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Account Type</td>
+                          <td className="border border-gray-300 px-4 py-3">{bankInfo.account_type}</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Swift Code</td>
+                          <td className="border border-gray-300 px-4 py-3">{bankInfo.swift_code}</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Wire Routing Number</td>
+                          <td className="border border-gray-300 px-4 py-3">{bankInfo.wire_routing_number}</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">Ach Routing Number</td>
+                          <td className="border border-gray-300 px-4 py-3">{bankInfo.ach_routing_number}</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-gray-300 px-4 py-3 bg-gray-50 font-medium">SWIFT/BIC</td>
+                          <td className="border border-gray-300 px-4 py-3">{bankInfo.swift_bic}</td>
+                        </tr>
+                      </>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -322,20 +576,37 @@ const DepositPage = () => {
           <div className="mb-8">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Currency</h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {currencies.map((currency) => (
-                <button
-                  key={currency.code}
-                  onClick={() => setSelectedCurrency(currency.code)}
-                  className={`p-4 border-2 rounded-lg text-center transition-colors ${
-                    selectedCurrency === currency.code
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="text-2xl mb-2">{currency.flag}</div>
-                  <div className="font-medium">{currency.name}</div>
-                </button>
-              ))}
+              {currencies.map((currency) => {
+                const isOthers = currency.code === 'OTHERS';
+                const isDisabled = isOthers && othersTooltip?.is_enabled;
+                
+                return (
+                  <Tooltip
+                    key={currency.code}
+                    content={isOthers && othersTooltip?.is_enabled ? othersTooltip.message : ''}
+                    disabled={!isOthers || !othersTooltip?.is_enabled}
+                  >
+                    <button
+                      onClick={() => !isDisabled && setSelectedCurrency(currency.code)}
+                      disabled={isDisabled}
+                      className={`p-4 border-2 rounded-lg text-center transition-colors w-full ${
+                        selectedCurrency === currency.code
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : isDisabled
+                          ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className={`text-2xl mb-2 ${isDisabled ? 'opacity-50' : ''}`}>
+                        {currency.flag}
+                      </div>
+                      <div className={`font-medium ${isDisabled ? 'opacity-50' : ''}`}>
+                        {currency.name}
+                      </div>
+                    </button>
+                  </Tooltip>
+                );
+              })}
             </div>
           </div>
 

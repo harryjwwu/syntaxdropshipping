@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { commissionAPI } from '../utils/api';
+import { commissionAPI, settingsAPI } from '../utils/api';
 import { 
   Users, 
   DollarSign, 
@@ -19,6 +19,7 @@ const AffiliatePage = () => {
   const [referralStats, setReferralStats] = useState(null);
   const [commissionRecords, setCommissionRecords] = useState([]);
   const [withdrawals, setWithdrawals] = useState([]);
+  const [commissionRules, setCommissionRules] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -35,7 +36,8 @@ const AffiliatePage = () => {
         accountResponse,
         statsResponse,
         recordsResponse,
-        withdrawalsResponse
+        withdrawalsResponse,
+        rulesResponse
       ] = await Promise.all([
         commissionAPI.getReferralCode().catch(err => {
           console.error('Referral code error:', err);
@@ -56,6 +58,10 @@ const AffiliatePage = () => {
         commissionAPI.getWithdrawals({ limit: 10 }).catch(err => {
           console.error('Withdrawals error:', err);
           return { data: { withdrawals: [] } };
+        }),
+        settingsAPI.getCommissionRules().catch(err => {
+          console.error('Commission rules error:', err);
+          return { data: { first_level_rate: 2.0, description: '只支持一层推荐返佣：一级返佣 2%', is_enabled: true } };
         })
       ]);
 
@@ -65,6 +71,9 @@ const AffiliatePage = () => {
       setReferralStats(statsResponse.data);
       setCommissionRecords(recordsResponse.data.records || []);
       setWithdrawals(withdrawalsResponse.data.withdrawals || []);
+      setCommissionRules(rulesResponse.data);
+      
+      console.log('Commission rules loaded:', rulesResponse.data);
     } catch (error) {
       console.error('Error loading affiliate data:', error);
       toast.error('Failed to load affiliate data');
@@ -259,6 +268,29 @@ const AffiliatePage = () => {
       {/* Tab Content */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
+          {/* Commission Rules Card */}
+          {commissionRules && commissionRules.is_enabled && (
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
+              <div className="flex items-center mb-4">
+                <div className="p-2 bg-purple-100 rounded-lg mr-3">
+                  <svg className="h-5 w-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-medium text-purple-800">Commission Rules</h3>
+                  <p className="text-sm text-purple-600">Current referral commission rate: <span className="font-bold">{commissionRules.first_level_rate}%</span></p>
+                </div>
+              </div>
+              
+              <div className="bg-white border border-purple-200 rounded-lg p-4">
+                <div className="text-sm text-purple-700 whitespace-pre-line leading-relaxed">
+                  {commissionRules.description}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Referral Link Card */}
           <div className="bg-white shadow rounded-lg p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Your Referral Information</h3>
@@ -366,6 +398,7 @@ const AffiliatePage = () => {
               </div>
             )}
           </div>
+
         </div>
       )}
 

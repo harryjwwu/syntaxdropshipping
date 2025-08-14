@@ -94,6 +94,52 @@ router.get('/bank-info', auth, async (req, res) => {
   }
 });
 
+// 获取PayPal支付信息
+router.get('/paypal-info', auth, async (req, res) => {
+  try {
+    const { getConnection } = require('../config/database');
+    const db = await getConnection();
+    
+    const [settings] = await db.execute(
+      'SELECT setting_value FROM system_settings WHERE setting_key = ? AND is_active = 1 LIMIT 1',
+      ['payment_paypal']
+    );
+
+    if (settings.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'PayPal payment information not configured'
+      });
+    }
+
+    // 解析JSON格式的设置值
+    const paypalInfo = JSON.parse(settings[0].setting_value);
+    
+    // 检查是否启用
+    if (!paypalInfo.is_enabled) {
+      return res.status(404).json({
+        success: false,
+        message: 'PayPal payment is currently disabled'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        account_number: paypalInfo.account_number,
+        the_name: paypalInfo.the_name,
+        currency: paypalInfo.currency
+      }
+    });
+  } catch (error) {
+    console.error('Error getting PayPal info:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get PayPal information'
+    });
+  }
+});
+
 // 创建充值记录
 router.post('/deposit', [auth, upload.single('paymentSlip')], async (req, res) => {
   try {
@@ -326,6 +372,41 @@ router.put('/admin/deposits/:id', [auth, requireAdmin], async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || 'Failed to process deposit'
+    });
+  }
+});
+
+// 获取OTHERS货币提示信息（公开API，用户端可访问）
+router.get('/others-currency-tooltip', async (req, res) => {
+  try {
+    const { getConnection } = require('../config/database');
+    const connection = await getConnection();
+    const [settings] = await connection.execute(
+      'SELECT setting_value FROM system_settings WHERE setting_key = ? AND is_active = 1 LIMIT 1',
+      ['others_currency_tooltip']
+    );
+    
+    if (settings.length === 0) {
+      return res.json({
+        success: true,
+        data: {
+          message: '如需其他币种，请联系我们',
+          is_enabled: true
+        }
+      });
+    }
+    
+    const tooltipInfo = JSON.parse(settings[0].setting_value);
+    
+    res.json({
+      success: true,
+      data: tooltipInfo
+    });
+  } catch (error) {
+    console.error('获取OTHERS货币提示失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '获取提示信息失败'
     });
   }
 });
