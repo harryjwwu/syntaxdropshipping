@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Wallet, CreditCard, Activity, Filter } from 'lucide-react';
+import { ArrowLeft, User, Wallet, CreditCard, Activity, Filter, Percent } from 'lucide-react';
 import { adminAPI, apiUtils } from '../utils/api';
 import toast from 'react-hot-toast';
 
@@ -12,7 +12,9 @@ const UserDetailPage = () => {
   const [userStats, setUserStats] = useState(null);
   const [deposits, setDeposits] = useState([]);
   const [transactions, setTransactions] = useState([]);
+  const [discountRules, setDiscountRules] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [discountLoading, setDiscountLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   
   // 分页状态
@@ -73,6 +75,27 @@ const UserDetailPage = () => {
     }
   };
 
+  // 获取用户折扣规则
+  const fetchDiscountRules = async () => {
+    if (!user?.dxm_client_id) {
+      setDiscountRules([]);
+      return;
+    }
+    
+    try {
+      setDiscountLoading(true);
+      const response = await adminAPI.getUserDiscountRules(user.dxm_client_id);
+      if (response.success) {
+        setDiscountRules(response.data || []);
+      }
+    } catch (error) {
+      console.error('获取折扣规则失败:', error);
+      // 不显示错误提示，静默失败
+    } finally {
+      setDiscountLoading(false);
+    }
+  };
+
   // 初始加载
   useEffect(() => {
     fetchUserDetail();
@@ -84,8 +107,10 @@ const UserDetailPage = () => {
       fetchUserDeposits();
     } else if (activeTab === 'transactions') {
       fetchUserTransactions();
+    } else if (activeTab === 'overview' && user) {
+      fetchDiscountRules();
     }
-  }, [activeTab, depositsPagination.page, transactionsPagination.page, depositStatusFilter, transactionTypeFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeTab, depositsPagination.page, transactionsPagination.page, depositStatusFilter, transactionTypeFilter, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 渲染用户头像
   const renderUserAvatar = (user, size = 'lg') => {
@@ -127,6 +152,11 @@ const UserDetailPage = () => {
         {config.label}
       </span>
     );
+  };
+
+  // 格式化折扣率显示
+  const formatDiscountRate = (rate) => {
+    return (rate * 10).toFixed(1) + '折';
   };
 
   if (loading) {
@@ -279,7 +309,7 @@ const UserDetailPage = () => {
         <div className="p-6">
           {activeTab === 'overview' && (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* 充值统计 */}
                 <div>
                   <h3 className="text-lg font-medium text-slate-900 mb-4">充值统计</h3>
@@ -345,6 +375,73 @@ const UserDetailPage = () => {
                         <span className="text-sm text-slate-500">
                           {apiUtils.formatDate(user.wallet_created_at)}
                         </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 店小秘绑定与折扣规则 */}
+                <div>
+                  <h3 className="text-lg font-medium text-slate-900 mb-4 flex items-center">
+                    <Percent className="h-5 w-5 mr-2" />
+                    订单折扣
+                  </h3>
+                  
+                  {/* 店小秘绑定状态 */}
+                  <div className="mb-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-slate-600">店小秘绑定</span>
+                      {user.dxm_client_id ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          已绑定 #{user.dxm_client_id}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                          未绑定
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 折扣规则 */}
+                  <div>
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="text-sm font-medium text-slate-700">折扣规则</span>
+                      {discountLoading && (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-500"></div>
+                      )}
+                    </div>
+                    
+                    {!user.dxm_client_id ? (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                        <p className="text-xs text-yellow-800">需要绑定店小秘才可设置折扣</p>
+                      </div>
+                    ) : discountRules.length === 0 ? (
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                        <p className="text-xs text-gray-600">暂无折扣规则</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {discountRules.map((rule) => (
+                          <div key={rule.id} className="bg-green-50 border border-green-200 rounded-lg p-3">
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs text-green-800">
+                                {rule.min_quantity}-{rule.max_quantity} 件
+                              </span>
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                {formatDiscountRate(rule.discount_rate)}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {user.dxm_client_id && (
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        <p className="text-xs text-slate-500">
+                          基于24小时内总下单件数
+                        </p>
                       </div>
                     )}
                   </div>

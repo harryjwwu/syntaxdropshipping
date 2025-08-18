@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Eye, UserCheck, UserX, Filter, Download, Ban, CheckCircle, Link } from 'lucide-react';
+import { Search, Eye, UserCheck, UserX, Filter, Download, Ban, CheckCircle, Link, Percent } from 'lucide-react';
 import { adminAPI, apiUtils } from '../utils/api';
 import toast from 'react-hot-toast';
 import PasswordVerificationModal from '../components/PasswordVerificationModal';
+import DiscountRulesModal from '../components/DiscountRulesModal';
 
 
 const UsersPage = () => {
@@ -35,6 +36,12 @@ const UsersPage = () => {
     isOpen: false,
     loading: false,
     userData: null
+  });
+
+  // 折扣设置弹窗状态
+  const [discountModal, setDiscountModal] = useState({
+    isOpen: false,
+    user: null
   });
 
 
@@ -200,6 +207,22 @@ const UsersPage = () => {
         action: '绑定店小秘客户ID',
         dxmClientId: clientId
       }
+    });
+  };
+
+  // 设置订单折扣
+  const handleSetDiscount = (user) => {
+    setDiscountModal({
+      isOpen: true,
+      user: user
+    });
+  };
+
+  // 关闭折扣设置弹窗
+  const handleCloseDiscountModal = () => {
+    setDiscountModal({
+      isOpen: false,
+      user: null
     });
   };
 
@@ -492,7 +515,7 @@ const UsersPage = () => {
                         {apiUtils.formatDate(user.created_at)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2 flex-wrap">
                           <button
                             onClick={() => handleViewUser(user.id)}
                             className="inline-flex items-center px-2 py-1 border border-transparent text-xs leading-4 font-medium rounded text-primary-700 bg-primary-100 hover:bg-primary-200"
@@ -534,6 +557,19 @@ const UsersPage = () => {
                               >
                                 <Link className="h-3 w-3 mr-1" />
                                 {user.dxm_client_id ? '已绑定' : '绑定店小秘'}
+                              </button>
+                              <button
+                                onClick={() => handleSetDiscount(user)}
+                                disabled={!user.dxm_client_id}
+                                className={`inline-flex items-center px-2 py-1 border border-transparent text-xs leading-4 font-medium rounded ${
+                                  user.dxm_client_id
+                                    ? 'text-orange-700 bg-orange-100 hover:bg-orange-200'
+                                    : 'text-gray-500 bg-gray-100 cursor-not-allowed'
+                                }`}
+                                title={user.dxm_client_id ? '设置订单折扣' : '需要绑定店小秘才可设置折扣'}
+                              >
+                                <Percent className="h-3 w-3 mr-1" />
+                                设置折扣
                               </button>
                             </>
                           )}
@@ -597,6 +633,12 @@ const UsersPage = () => {
         loading={passwordModal.loading}
       />
 
+      {/* 折扣设置弹窗 */}
+      <DiscountRulesModal
+        isOpen={discountModal.isOpen}
+        onClose={handleCloseDiscountModal}
+        user={discountModal.user}
+      />
 
     </div>
   );

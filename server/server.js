@@ -19,6 +19,7 @@ const spuBatchImportRoutes = require('./routes/spu-batch-import');
 const spuQuotesRoutes = require('./routes/spu-quotes');
 const { router: spuPriceHistoryRoutes } = require('./routes/spu-price-history');
 const cosRoutes = require('./routes/cos');
+const userDiscountRulesRoutes = require('./routes/user-discount-rules');
 // const dianxiaomiRoutes = require('./routes/dianxiaomi'); // 已删除，店小秘无API
 
 // Import database
@@ -116,6 +117,7 @@ app.use('/api/admin/spu-batch-import', spuBatchImportRoutes);
 app.use('/api/admin/spu-quotes', spuQuotesRoutes);
 app.use('/api/admin/spu-price-history', spuPriceHistoryRoutes);
 app.use('/api/cos', cosRoutes);
+app.use('/api/admin/user-discount-rules', userDiscountRulesRoutes);
 // app.use('/api/dianxiaomi', dianxiaomiRoutes); // 已删除，店小秘无API
 
 // Settings routes

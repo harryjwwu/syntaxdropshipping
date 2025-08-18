@@ -157,6 +157,22 @@ export const adminAPI = {
   // 验证管理员二次密码
   verifyAdminPassword: (password) => api.post('/admin/verify-admin-password', { password }),
 
+  // ==================== 用户折扣规则 API ====================
+  // 获取用户折扣规则
+  getUserDiscountRules: (dxmClientId) => api.get(`/admin/user-discount-rules/${dxmClientId}`),
+  
+  // 创建用户折扣规则
+  createUserDiscountRule: (dxmClientId, ruleData) => api.post(`/admin/user-discount-rules/${dxmClientId}`, ruleData),
+  
+  // 更新用户折扣规则
+  updateUserDiscountRule: (dxmClientId, ruleId, ruleData) => api.put(`/admin/user-discount-rules/${dxmClientId}/${ruleId}`, ruleData),
+  
+  // 删除用户折扣规则
+  deleteUserDiscountRule: (dxmClientId, ruleId) => api.delete(`/admin/user-discount-rules/${dxmClientId}/${ruleId}`),
+  
+  // 批量删除用户折扣规则
+  deleteAllUserDiscountRules: (dxmClientId) => api.delete(`/admin/user-discount-rules/${dxmClientId}`),
+
   // ==================== SPU管理 API ====================
   // 获取SPU列表
   getSpus: (params) => api.get('/admin/spus', { params }),
