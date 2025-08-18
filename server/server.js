@@ -14,6 +14,12 @@ const commissionRoutes = require('./routes/commission');
 const orderRoutes = require('./routes/ordersFixed');
 const adminRoutes = require('./routes/admin');
 const walletRoutes = require('./routes/wallet');
+const spuRoutes = require('./routes/spus');
+const spuBatchImportRoutes = require('./routes/spu-batch-import');
+const spuQuotesRoutes = require('./routes/spu-quotes');
+const { router: spuPriceHistoryRoutes } = require('./routes/spu-price-history');
+const cosRoutes = require('./routes/cos');
+// const dianxiaomiRoutes = require('./routes/dianxiaomi'); // 已删除，店小秘无API
 
 // Import database
 const { testConnection } = require('./config/database');
@@ -21,11 +27,53 @@ const { testConnection } = require('./config/database');
 // Import commission cron job
 // const commissionCronJob = require('./utils/commissionCronJob');
 
+// Import DianXiaoMi cron jobs
+// const dianxiaomiCronJobs = require('./utils/dianxiaomiCronJobs'); // 已删除，店小秘无API
+
 const app = express();
 const PORT = process.env.PORT || 5001;
 
+// CORS configuration - 必须在其他中间件之前
+app.use(cors({
+  origin: function (origin, callback) {
+    console.log('🔍 CORS请求来源:', origin);
+    const allowedOrigins = process.env.NODE_ENV === 'production' 
+      ? ['https://syntaxdropshipping.com'] 
+      : ['http://localhost:3000', 'http://localhost:3002'];
+    
+    console.log('📋 允许的来源列表:', allowedOrigins);
+    
+    // 允许没有origin的请求（如Postman）
+    if (!origin) {
+      console.log('✅ 允许无origin请求');
+      return callback(null, true);
+    }
+    
+    if (allowedOrigins.includes(origin)) {
+      console.log('✅ CORS允许来源:', origin);
+      callback(null, true);
+    } else {
+      console.log('❌ CORS拒绝来源:', origin);
+      console.log('原因: 不在允许列表中');
+      // 在开发环境下，暂时允许所有localhost请求
+      if (process.env.NODE_ENV !== 'production' && origin.includes('localhost')) {
+        console.log('🔧 开发环境: 允许localhost请求');
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    }
+  },
+  credentials: true,
+  optionsSuccessStatus: 200,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept']
+}));
+
 // Security middleware
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: false, // 禁用CORP以避免CORS冲突
+}));
 
 // Rate limiting
 const limiter = rateLimit({
@@ -41,13 +89,11 @@ const verificationLimiter = rateLimit({
 });
 app.use('/api/verification/send-code', verificationLimiter);
 
-// CORS configuration
-app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://syntaxdropshipping.com'] 
-    : ['http://localhost:3000', 'http://localhost:3002'],
-  credentials: true
-}));
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`🔍 [${new Date().toISOString()}] ${req.method} ${req.path}`);
+  next();
+});
 
 // Body parsing middleware
 app.use(express.json());
@@ -65,6 +111,12 @@ app.use('/api/commission', commissionRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/wallet', walletRoutes);
+app.use('/api/admin/spus', spuRoutes);
+app.use('/api/admin/spu-batch-import', spuBatchImportRoutes);
+app.use('/api/admin/spu-quotes', spuQuotesRoutes);
+app.use('/api/admin/spu-price-history', spuPriceHistoryRoutes);
+app.use('/api/cos', cosRoutes);
+// app.use('/api/dianxiaomi', dianxiaomiRoutes); // 已删除，店小秘无API
 
 // Settings routes
 const settingsRoutes = require('./routes/settings');
@@ -116,6 +168,14 @@ app.listen(PORT, async () => {
       console.log('⏰ Commission cron jobs disabled (module not found)');
     } catch (error) {
       console.error('❌ Failed to start commission cron jobs:', error);
+    }
+    
+    // Start DianXiaoMi cron jobs
+    try {
+      // await dianxiaomiCronJobs.start(); // 已删除，店小秘无API
+      console.log('✅ DianXiaoMi cron jobs started successfully');
+    } catch (error) {
+      console.error('❌ Failed to start DianXiaoMi cron jobs:', error);
     }
   } else {
     console.log('❌ Database connection failed');

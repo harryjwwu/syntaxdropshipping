@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const bcrypt = require('bcryptjs');
 const { authenticateAdmin, logAction } = require('../middleware/adminAuth');
 const { getConnection } = require('../config/database');
 const { validateAdminLogin, logAdminAction } = require('../utils/initAdmin');
@@ -902,6 +903,129 @@ router.put('/users/:id/toggle-status', authenticateAdmin, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to update user status'
+    });
+  }
+});
+
+// 绑定店小秘客户ID
+router.post('/bind-dxm-client', authenticateAdmin, async (req, res) => {
+  const pool = await getConnection();
+  
+  try {
+    const { userId, dxmClientId, adminPassword } = req.body;
+    
+    // 验证必需参数
+    if (!userId || !dxmClientId || !adminPassword) {
+      return res.status(400).json({
+        success: false,
+        message: '用户ID、店小秘客户ID和管理员密码都是必需的'
+      });
+    }
+
+    // 验证店小秘客户ID是否为有效数字
+    const clientId = parseInt(dxmClientId);
+    if (isNaN(clientId) || clientId <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: '店小秘客户ID必须是有效的正整数'
+      });
+    }
+
+    // 验证管理员二次验证密码
+    const adminVerificationPassword = process.env.ADMIN_VERIFICATION_PASSWORD;
+    
+    if (!adminVerificationPassword) {
+      return res.status(500).json({
+        success: false,
+        message: 'Admin verification password not configured'
+      });
+    }
+    
+    if (adminPassword !== adminVerificationPassword) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid verification password'
+      });
+    }
+
+    // 检查用户是否存在
+    const [userRows] = await pool.execute(
+      'SELECT id, email, dxm_client_id FROM users WHERE id = ?',
+      [userId]
+    );
+
+    if (userRows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: '用户不存在'
+      });
+    }
+
+    const user = userRows[0];
+
+    // 检查用户是否已经绑定了店小秘客户ID
+    if (user.dxm_client_id) {
+      return res.status(400).json({
+        success: false,
+        message: '该用户已经绑定了店小秘客户ID，不能重复绑定'
+      });
+    }
+
+    // 检查店小秘客户ID是否已经被其他用户绑定
+    const [existingRows] = await pool.execute(
+      'SELECT id, email FROM users WHERE dxm_client_id = ?',
+      [clientId]
+    );
+
+    if (existingRows.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `店小秘客户ID ${clientId} 已经被用户 ${existingRows[0].email} 绑定`
+      });
+    }
+
+    // 执行绑定操作
+    await pool.execute(
+      'UPDATE users SET dxm_client_id = ? WHERE id = ?',
+      [clientId, userId]
+    );
+
+    // 记录操作日志
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const userAgent = req.get('User-Agent');
+    await logAdminAction(
+      req.admin.id,
+      'bind_dxm_client',
+      userId,
+      { dxmClientId: clientId },
+      `绑定店小秘客户ID ${clientId} 到用户 ${user.email}`,
+      ipAddress,
+      userAgent
+    );
+
+    res.json({
+      success: true,
+      message: `成功将店小秘客户ID ${clientId} 绑定到用户 ${user.email}`,
+      data: {
+        userId: userId,
+        dxmClientId: clientId,
+        userEmail: user.email
+      }
+    });
+
+  } catch (error) {
+    console.error('绑定店小秘客户ID失败:', error);
+    
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({
+        success: false,
+        message: '该店小秘客户ID已经被绑定'
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: '绑定Shopify客户ID失败'
     });
   }
 });

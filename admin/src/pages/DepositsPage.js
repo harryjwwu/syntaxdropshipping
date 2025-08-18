@@ -48,7 +48,12 @@ const DepositsPage = () => {
       const response = await adminAPI.getDeposits(filters);
       if (response.success) {
         setDeposits(response.data.deposits);
-        setPagination(response.data.pagination);
+        setPagination(response.data.pagination || {
+          page: 1,
+          limit: 20,
+          total: 0,
+          pages: 0
+        });
         setStats(response.data.stats);
       }
     } catch (error) {

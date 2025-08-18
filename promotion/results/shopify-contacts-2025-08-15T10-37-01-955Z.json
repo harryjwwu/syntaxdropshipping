@@ -1,0 +1,257 @@
+{
+  "generatedAt": "2025-08-15T10:37:01.959Z",
+  "totalProcessed": 30,
+  "totalShopifyFound": 6,
+  "successRate": "20.0%",
+  "summary": {
+    "totalSites": 6,
+    "withEmails": 5,
+    "withWhatsApp": 0,
+    "withPhones": 4,
+    "totalContacts": 39
+  },
+  "sites": [
+    {
+      "url": "https://www.gymshark.com",
+      "domain": "www.gymshark.com",
+      "title": "Gymshark Official Store - Gym Clothes & Workout Clothes",
+      "isShopify": true,
+      "shopifyIndicators": [
+        "shopify",
+        "cdn.shopify.com"
+      ],
+      "isEuropean": true,
+      "contacts": {
+        "emails": [
+          "press@gymshark.com",
+          "corporate@gymshark.com",
+          "support@gymshark.com"
+        ],
+        "whatsapp": [],
+        "phones": [
+          "+10140-1018",
+          "+10190-1019"
+        ],
+        "social": {
+          "instagram": [
+            "https://www.instagram.com/gymshark"
+          ],
+          "facebook": [
+            "https://www.facebook.com/GymShark"
+          ],
+          "linkedin": [
+            "https://linkedin.com/shareArticle?mini=true&source=Gymshark&url=https%3A%2F%2Fsupport.gymshark.com%2Farticle%2Fcontact-us&title=Contact Us"
+          ],
+          "twitter": [
+            "https://www.twitter.com/gymshark",
+            "https://twitter.com/share?url=https%3A%2F%2Fsupport.gymshark.com%2Farticle%2Fcontact-us&text=Contact Us"
+          ],
+          "tiktok": [
+            "https://www.tiktok.com/@gymshark"
+          ]
+        },
+        "other": []
+      },
+      "totalContacts": 11,
+      "processedAt": "2025-08-15T10:34:37.660Z",
+      "status": "success"
+    },
+    {
+      "url": "https://www.allbirds.eu",
+      "domain": "www.allbirds.eu",
+      "title": "Allbirds: Bequeme, Nachhaltige Schuhe & Sneaker",
+      "isShopify": true,
+      "shopifyIndicators": [
+        "shopify",
+        "cdn.shopify.com",
+        "shopify-section",
+        "shopify.theme",
+        "shopify-features",
+        "shopify.routes"
+      ],
+      "isEuropean": true,
+      "contacts": {
+        "emails": [
+          "service@allbirds.de",
+          "service@allbirds.eu"
+        ],
+        "whatsapp": [],
+        "phones": [
+          "+43 5522-72303",
+          "071 969 66 55"
+        ],
+        "social": {
+          "instagram": [
+            "https://www.instagram.com/allbirds"
+          ],
+          "facebook": [
+            "https://www.facebook.com/weareallbirds"
+          ],
+          "linkedin": [],
+          "twitter": [],
+          "tiktok": []
+        },
+        "other": []
+      },
+      "totalContacts": 6,
+      "processedAt": "2025-08-15T10:34:48.612Z",
+      "status": "success"
+    },
+    {
+      "url": "https://www.bombas.com",
+      "domain": "www.bombas.com",
+      "title": "Bombas. Socks, Underwear, T-Shirts, Slippers designed for comfort, quality, and impact",
+      "isShopify": true,
+      "shopifyIndicators": [
+        "shopify",
+        "cdn.shopify.com"
+      ],
+      "isEuropean": true,
+      "contacts": {
+        "emails": [],
+        "whatsapp": [],
+        "phones": [],
+        "social": {
+          "instagram": [
+            "https://www.instagram.com/bombas"
+          ],
+          "facebook": [
+            "https://www.facebook.com/bombassocks"
+          ],
+          "linkedin": [],
+          "twitter": [
+            "https://www.twitter.com/bombas"
+          ],
+          "tiktok": []
+        },
+        "other": []
+      },
+      "totalContacts": 3,
+      "processedAt": "2025-08-15T10:34:55.099Z",
+      "status": "success"
+    },
+    {
+      "url": "https://www.glossier.com",
+      "domain": "www.glossier.com",
+      "title": "Glossier",
+      "isShopify": true,
+      "shopifyIndicators": [
+        "shopify",
+        "cdn.shopify.com",
+        "shopify-section",
+        "shopify.theme",
+        "shopify-features",
+        "shopify.routes"
+      ],
+      "isEuropean": true,
+      "contacts": {
+        "emails": [
+          "gteam@glossier.com",
+          "brand@glossier.com",
+          "press@glossier.com"
+        ],
+        "whatsapp": [],
+        "phones": [],
+        "social": {
+          "instagram": [
+            "https://www.instagram.com/glossier/"
+          ],
+          "facebook": [
+            "https://www.facebook.com/glossier"
+          ],
+          "linkedin": [],
+          "twitter": [],
+          "tiktok": [
+            "https://www.tiktok.com/@glossier"
+          ]
+        },
+        "other": []
+      },
+      "totalContacts": 6,
+      "processedAt": "2025-08-15T10:35:03.983Z",
+      "status": "success"
+    },
+    {
+      "url": "https://www.casper.com",
+      "domain": "www.casper.com",
+      "title": "The Best Bed for Better Sleep | Casper Homepage",
+      "isShopify": true,
+      "shopifyIndicators": [
+        "shopify",
+        "cdn.shopify.com",
+        "shopify-section",
+        "shopify.theme",
+        "shopify-features",
+        "shopify.routes"
+      ],
+      "isEuropean": true,
+      "contacts": {
+        "emails": [
+          "support@casper.com"
+        ],
+        "whatsapp": [],
+        "phones": [
+          "+18884980003",
+          "888.498.0003",
+          "+1.888.498.0003"
+        ],
+        "social": {
+          "instagram": [
+            "https://www.instagram.com/casper/"
+          ],
+          "facebook": [
+            "https://www.facebook.com/Casper/"
+          ],
+          "linkedin": [
+            "https://www.linkedin.com/company/casper/"
+          ],
+          "twitter": [
+            "https://x.com/casper"
+          ],
+          "tiktok": []
+        },
+        "other": []
+      },
+      "totalContacts": 8,
+      "processedAt": "2025-08-15T10:35:11.253Z",
+      "status": "success"
+    },
+    {
+      "url": "https://www.fashionnova.com",
+      "domain": "www.fashionnova.com",
+      "title": "Fashion Nova | Fashion Online For Women | Affordable Women's Clothing | Fashion NovaSearch AI IconSearch AI Icon",
+      "isShopify": true,
+      "shopifyIndicators": [
+        "shopify",
+        "cdn.shopify.com"
+      ],
+      "isEuropean": true,
+      "contacts": {
+        "emails": [
+          "e7c5d00f7ff26a82791e5ece4cbfb27c@o4504566675341312.ingest.sentry.io"
+        ],
+        "whatsapp": [],
+        "phones": [
+          "(818) 347-6500"
+        ],
+        "social": {
+          "instagram": [
+            "https://www.instagram.com/fashionnova"
+          ],
+          "facebook": [
+            "https://www.facebook.com/FashionNova"
+          ],
+          "linkedin": [],
+          "twitter": [],
+          "tiktok": [
+            "https://www.tiktok.com/@fashionnova"
+          ]
+        },
+        "other": []
+      },
+      "totalContacts": 5,
+      "processedAt": "2025-08-15T10:36:39.550Z",
+      "status": "success"
+    }
+  ]
+}

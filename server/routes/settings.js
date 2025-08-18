@@ -43,106 +43,60 @@ router.get('/', authenticateAdmin, async (req, res) => {
   }
 });
 
-// 获取单个系统设置
-router.get('/:key', authenticateAdmin, async (req, res) => {
+// ==================== 枚举值设置API ====================
+
+// 获取所有枚举值设置
+router.get('/enum-values', authenticateAdmin, async (req, res) => {
+  console.log('🚀 [ENUM-VALUES] 路由处理函数开始执行');
+  
   try {
-    const { key } = req.params;
+    console.log('🔍 [ENUM-VALUES] 请求到达 - 开始处理');
+    console.log('🔍 [ENUM-VALUES] 请求路径:', req.path);
+    console.log('🔍 [ENUM-VALUES] 请求方法:', req.method);
+    console.log('🔍 [ENUM-VALUES] 管理员信息:', req.admin ? 'exists' : 'missing');
     
+    console.log('🔍 [ENUM-VALUES] 开始获取数据库连接...');
     const connection = await getConnection();
+    console.log('✅ [ENUM-VALUES] 数据库连接成功');
+    
+    console.log('🔍 [ENUM-VALUES] 执行查询...');
     const [settings] = await connection.execute(
-      'SELECT * FROM system_settings WHERE setting_key = ? AND is_active = 1',
-      [key]
+      'SELECT * FROM system_settings WHERE setting_type = ? AND is_active = 1 ORDER BY setting_key',
+      ['enum_values']
     );
+    
+    console.log('📋 [ENUM-VALUES] 查询结果:', settings);
+    console.log('📋 [ENUM-VALUES] 查询结果数量:', settings.length);
     
     if (settings.length === 0) {
+      console.log('⚠️ [ENUM-VALUES] 没有找到枚举值设置，返回404');
       return res.status(404).json({
         success: false,
         message: '设置项不存在'
       });
     }
     
-    const setting = settings[0];
-    setting.setting_value = setting.setting_value ? JSON.parse(setting.setting_value) : null;
+    const enumSettings = {};
+    settings.forEach(setting => {
+      console.log('📋 [ENUM-VALUES] 处理设置项:', setting.setting_key, setting.setting_value);
+      enumSettings[setting.setting_key] = {
+        ...setting,
+        setting_value: setting.setting_value ? JSON.parse(setting.setting_value) : []
+      };
+    });
+    
+    console.log('✅ [ENUM-VALUES] 最终枚举设置:', enumSettings);
     
     res.json({
       success: true,
-      data: setting
+      data: enumSettings
     });
   } catch (error) {
-    console.error('获取系统设置失败:', error);
+    console.error('❌ [ENUM-VALUES] 获取枚举值设置失败:', error);
+    console.error('❌ [ENUM-VALUES] 错误堆栈:', error.stack);
     res.status(500).json({
       success: false,
-      message: '获取系统设置失败'
-    });
-  }
-});
-
-// ==================== 更新系统设置 ====================
-
-// 更新系统设置
-router.put('/:key', authenticateAdmin, async (req, res) => {
-  try {
-    const { key } = req.params;
-    const { setting_value, description } = req.body;
-    
-    if (!setting_value) {
-      return res.status(400).json({
-        success: false,
-        message: '设置值不能为空'
-      });
-    }
-    
-    const connection = await getConnection();
-    
-    // 检查设置项是否存在
-    const [existingSettings] = await connection.execute(
-      'SELECT id FROM system_settings WHERE setting_key = ?',
-      [key]
-    );
-    
-    if (existingSettings.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: '设置项不存在'
-      });
-    }
-    
-    // 更新设置
-    const settingValueJson = JSON.stringify(setting_value);
-    const updateFields = ['setting_value = ?'];
-    const updateParams = [settingValueJson];
-    
-    if (description !== undefined) {
-      updateFields.push('description = ?');
-      updateParams.push(description);
-    }
-    
-    updateParams.push(key);
-    
-    await connection.execute(
-      `UPDATE system_settings SET ${updateFields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE setting_key = ?`,
-      updateParams
-    );
-    
-    // 获取更新后的设置
-    const [updatedSettings] = await connection.execute(
-      'SELECT * FROM system_settings WHERE setting_key = ?',
-      [key]
-    );
-    
-    const updatedSetting = updatedSettings[0];
-    updatedSetting.setting_value = JSON.parse(updatedSetting.setting_value);
-    
-    res.json({
-      success: true,
-      message: '系统设置更新成功',
-      data: updatedSetting
-    });
-  } catch (error) {
-    console.error('更新系统设置失败:', error);
-    res.status(500).json({
-      success: false,
-      message: '更新系统设置失败'
+      message: '获取枚举值设置失败: ' + error.message
     });
   }
 });
@@ -274,6 +228,212 @@ router.get('/commission/rules', async (req, res) => {
     res.status(500).json({
       success: false,
       message: '获取佣金规则失败'
+    });
+  }
+});
+
+// 获取单个枚举值设置
+router.get('/enum-values/:key', async (req, res) => {
+  try {
+    const { key } = req.params;
+    
+    const connection = await getConnection();
+    const [settings] = await connection.execute(
+      'SELECT * FROM system_settings WHERE setting_key = ? AND setting_type = ? AND is_active = 1',
+      [key, 'enum_values']
+    );
+    
+    if (settings.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: '枚举值设置不存在'
+      });
+    }
+    
+    const setting = settings[0];
+    setting.setting_value = setting.setting_value ? JSON.parse(setting.setting_value) : [];
+    
+    res.json({
+      success: true,
+      data: setting.setting_value
+    });
+  } catch (error) {
+    console.error('获取枚举值设置失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '获取枚举值设置失败'
+    });
+  }
+});
+
+// 更新枚举值设置
+router.put('/enum-values/:key', authenticateAdmin, async (req, res) => {
+  try {
+    const { key } = req.params;
+    const { values, description } = req.body;
+    
+    if (!Array.isArray(values)) {
+      return res.status(400).json({
+        success: false,
+        message: '枚举值必须是数组格式'
+      });
+    }
+    
+    const connection = await getConnection();
+    
+    // 检查设置项是否存在
+    const [existingSettings] = await connection.execute(
+      'SELECT id FROM system_settings WHERE setting_key = ? AND setting_type = ?',
+      [key, 'enum_values']
+    );
+    
+    if (existingSettings.length === 0) {
+      // 创建新的枚举值设置
+      await connection.execute(
+        'INSERT INTO system_settings (setting_key, setting_value, setting_type, description, is_active) VALUES (?, ?, ?, ?, ?)',
+        [key, JSON.stringify(values), 'enum_values', description || `${key}枚举值设置`, 1]
+      );
+    } else {
+      // 更新现有设置
+      const updateFields = ['setting_value = ?'];
+      const updateParams = [JSON.stringify(values)];
+      
+      if (description !== undefined) {
+        updateFields.push('description = ?');
+        updateParams.push(description);
+      }
+      
+      updateParams.push(key);
+      
+      await connection.execute(
+        `UPDATE system_settings SET ${updateFields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE setting_key = ? AND setting_type = ?`,
+        [...updateParams, 'enum_values']
+      );
+    }
+    
+    // 获取更新后的设置
+    const [updatedSettings] = await connection.execute(
+      'SELECT * FROM system_settings WHERE setting_key = ? AND setting_type = ?',
+      [key, 'enum_values']
+    );
+    
+    const updatedSetting = updatedSettings[0];
+    updatedSetting.setting_value = JSON.parse(updatedSetting.setting_value);
+    
+    res.json({
+      success: true,
+      message: '枚举值设置更新成功',
+      data: updatedSetting
+    });
+  } catch (error) {
+    console.error('更新枚举值设置失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '更新枚举值设置失败'
+    });
+  }
+});
+
+// ==================== 通用API (放在最后以避免路径冲突) ====================
+
+// 获取单个系统设置
+router.get('/:key', authenticateAdmin, async (req, res) => {
+  try {
+    const { key } = req.params;
+    
+    const connection = await getConnection();
+    const [settings] = await connection.execute(
+      'SELECT * FROM system_settings WHERE setting_key = ? AND is_active = 1',
+      [key]
+    );
+    
+    if (settings.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: '设置项不存在'
+      });
+    }
+    
+    const setting = settings[0];
+    setting.setting_value = setting.setting_value ? JSON.parse(setting.setting_value) : null;
+    
+    res.json({
+      success: true,
+      data: setting
+    });
+  } catch (error) {
+    console.error('获取系统设置失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '获取系统设置失败'
+    });
+  }
+});
+
+// 更新系统设置
+router.put('/:key', authenticateAdmin, async (req, res) => {
+  try {
+    const { key } = req.params;
+    const { setting_value, description } = req.body;
+    
+    if (!setting_value) {
+      return res.status(400).json({
+        success: false,
+        message: '设置值不能为空'
+      });
+    }
+    
+    const connection = await getConnection();
+    
+    // 检查设置项是否存在
+    const [existingSettings] = await connection.execute(
+      'SELECT id FROM system_settings WHERE setting_key = ?',
+      [key]
+    );
+    
+    if (existingSettings.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: '设置项不存在'
+      });
+    }
+    
+    // 更新设置
+    const settingValueJson = JSON.stringify(setting_value);
+    const updateFields = ['setting_value = ?'];
+    const updateParams = [settingValueJson];
+    
+    if (description !== undefined) {
+      updateFields.push('description = ?');
+      updateParams.push(description);
+    }
+    
+    updateParams.push(key);
+    
+    await connection.execute(
+      `UPDATE system_settings SET ${updateFields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE setting_key = ?`,
+      updateParams
+    );
+    
+    // 获取更新后的设置
+    const [updatedSettings] = await connection.execute(
+      'SELECT * FROM system_settings WHERE setting_key = ?',
+      [key]
+    );
+    
+    const updatedSetting = updatedSettings[0];
+    updatedSetting.setting_value = JSON.parse(updatedSetting.setting_value);
+    
+    res.json({
+      success: true,
+      message: '系统设置更新成功',
+      data: updatedSetting
+    });
+  } catch (error) {
+    console.error('更新系统设置失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '更新系统设置失败'
     });
   }
 });

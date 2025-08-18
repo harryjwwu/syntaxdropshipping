@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Eye, UserCheck, UserX, Filter, Download, Ban, CheckCircle } from 'lucide-react';
+import { Search, Eye, UserCheck, UserX, Filter, Download, Ban, CheckCircle, Link } from 'lucide-react';
 import { adminAPI, apiUtils } from '../utils/api';
 import toast from 'react-hot-toast';
 import PasswordVerificationModal from '../components/PasswordVerificationModal';
+
 
 const UsersPage = () => {
   const [users, setUsers] = useState([]);
@@ -35,6 +36,8 @@ const UsersPage = () => {
     loading: false,
     userData: null
   });
+
+
   
   // 密码验证对话框的ref
   const passwordModalRef = useRef();
@@ -54,7 +57,12 @@ const UsersPage = () => {
       });
       
       setUsers(response.data.users);
-      setPagination(response.data.pagination);
+      setPagination(response.data.pagination || {
+        page: 1,
+        limit: 20,
+        total: 0,
+        pages: 0
+      });
       if (response.data.stats) {
         setUserStats(response.data.stats);
       }
@@ -109,15 +117,22 @@ const UsersPage = () => {
 
   // 处理密码验证
   const handlePasswordVerification = async (password) => {
-    const { userId, newStatus, userName, action } = passwordModal.userData;
+    const { userId, userName, action } = passwordModal.userData;
     
     setPasswordModal(prev => ({ ...prev, loading: true }));
 
     try {
-      // 执行禁用/启用操作（包含密码验证）
-      await adminAPI.toggleUserStatus(userId, newStatus, password);
-      
-      toast.success(`用户${action}成功`);
+      if (action === '绑定店小秘客户ID') {
+        // 处理店小秘绑定操作
+        const { dxmClientId } = passwordModal.userData;
+        await adminAPI.bindDxmClient(userId, dxmClientId, password);
+        toast.success(`成功将店小秘客户ID ${dxmClientId} 绑定到用户 ${userName}`);
+      } else {
+        // 处理禁用/启用操作
+        const { newStatus } = passwordModal.userData;
+        await adminAPI.toggleUserStatus(userId, newStatus, password);
+        toast.success(`用户${action}成功`);
+      }
       
       // 清空密码
       passwordModalRef.current?.clearPassword();
@@ -128,13 +143,13 @@ const UsersPage = () => {
       // 刷新用户列表
       fetchUsers();
     } catch (error) {
-      console.error(`${action}用户失败:`, error);
+      console.error(`${action}失败:`, error);
       
       // 显示具体错误信息在对话框内
-      const errorMessage = error.response?.data?.message || `${action}用户失败`;
+      const errorMessage = error.response?.data?.message || `${action}失败`;
       if (errorMessage.includes('Invalid verification password')) {
         // 使用对话框内的错误提示
-        passwordModalRef.current?.showError('验证密码出错，请重新输入');
+        passwordModalRef.current?.showError('验证密码错误，请重新输入');
       } else {
         // 其他错误使用toast
         toast.error(errorMessage);
@@ -152,6 +167,43 @@ const UsersPage = () => {
     passwordModalRef.current?.clearPassword();
     setPasswordModal({ isOpen: false, loading: false, userData: null });
   };
+
+  // 绑定店小秘客户ID
+  const handleBindDxmClient = (userId, userName, currentDxmId) => {
+    if (currentDxmId) {
+      toast.error('该用户已经绑定了店小秘客户ID，不能重复绑定');
+      return;
+    }
+    
+    // 弹出输入框获取店小秘客户ID
+    const dxmClientId = prompt('请输入店小秘客户ID（例如：6745181）:');
+    
+    if (!dxmClientId) {
+      return; // 用户取消了输入
+    }
+    
+    const clientId = parseInt(dxmClientId.trim());
+    if (isNaN(clientId) || clientId <= 0) {
+      toast.error('店小秘客户ID必须是有效的正整数');
+      return;
+    }
+    
+
+    
+    // 打开密码验证对话框
+    setPasswordModal({
+      isOpen: true,
+      loading: false,
+      userData: {
+        userId,
+        userName,
+        action: '绑定店小秘客户ID',
+        dxmClientId: clientId
+      }
+    });
+  };
+
+
 
   // 导出用户数据
   const handleExportUsers = async () => {
@@ -364,6 +416,9 @@ const UsersPage = () => {
                       账户状态
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                      店小秘绑定
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                       注册时间
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
@@ -421,6 +476,18 @@ const UsersPage = () => {
                           )}
                         </div>
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {user.dxm_client_id ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            <Link className="h-3 w-3 mr-1" />
+                            已绑定 #{user.dxm_client_id}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                            未绑定
+                          </span>
+                        )}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                         {apiUtils.formatDate(user.created_at)}
                       </td>
@@ -434,26 +501,41 @@ const UsersPage = () => {
                             详情
                           </button>
                           {user.role !== 'admin' && (
-                            <button
-                              onClick={() => handleToggleUserStatus(user.id, user.is_active, user.name || user.email)}
-                              className={`inline-flex items-center px-2 py-1 border border-transparent text-xs leading-4 font-medium rounded ${
-                                user.is_active
-                                  ? 'text-red-700 bg-red-100 hover:bg-red-200'
-                                  : 'text-green-700 bg-green-100 hover:bg-green-200'
-                              }`}
-                            >
-                              {user.is_active ? (
-                                <>
-                                  <Ban className="h-3 w-3 mr-1" />
-                                  禁用
-                                </>
-                              ) : (
-                                <>
-                                  <CheckCircle className="h-3 w-3 mr-1" />
-                                  启用
-                                </>
-                              )}
-                            </button>
+                            <>
+                              <button
+                                onClick={() => handleToggleUserStatus(user.id, user.is_active, user.name || user.email)}
+                                className={`inline-flex items-center px-2 py-1 border border-transparent text-xs leading-4 font-medium rounded ${
+                                  user.is_active
+                                    ? 'text-red-700 bg-red-100 hover:bg-red-200'
+                                    : 'text-green-700 bg-green-100 hover:bg-green-200'
+                                }`}
+                              >
+                                {user.is_active ? (
+                                  <>
+                                    <Ban className="h-3 w-3 mr-1" />
+                                    禁用
+                                  </>
+                                ) : (
+                                  <>
+                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                    启用
+                                  </>
+                                )}
+                              </button>
+                              <button
+                                onClick={() => handleBindDxmClient(user.id, user.name || user.email, user.dxm_client_id)}
+                                disabled={!!user.dxm_client_id}
+                                className={`inline-flex items-center px-2 py-1 border border-transparent text-xs leading-4 font-medium rounded ${
+                                  user.dxm_client_id
+                                    ? 'text-gray-500 bg-gray-100 cursor-not-allowed'
+                                    : 'text-blue-700 bg-blue-100 hover:bg-blue-200'
+                                }`}
+                                title={user.dxm_client_id ? '已绑定店小秘客户ID' : '绑定店小秘客户ID'}
+                              >
+                                <Link className="h-3 w-3 mr-1" />
+                                {user.dxm_client_id ? '已绑定' : '绑定店小秘'}
+                              </button>
+                            </>
                           )}
                         </div>
                       </td>
@@ -506,12 +588,16 @@ const UsersPage = () => {
         onConfirm={handlePasswordVerification}
         title="高危操作验证"
         message={passwordModal.userData ? 
-          `您即将${passwordModal.userData.action}用户 "${passwordModal.userData.userName}"。此操作需要管理员二次密码验证。${passwordModal.userData.action === '禁用' ? '\n\n⚠️ 禁用后该用户将无法登录系统。' : ''}` : 
+          passwordModal.userData.action === '绑定店小秘客户ID' ?
+            `您即将为用户 "${passwordModal.userData.userName}" 绑定店小秘客户ID: ${passwordModal.userData.dxmClientId}。\n\n⚠️ 此操作不可撤销，绑定后无法更改。\n\n请输入管理员验证密码确认操作。` :
+            `您即将${passwordModal.userData.action}用户 "${passwordModal.userData.userName}"。此操作需要管理员二次密码验证。${passwordModal.userData.action === '禁用' ? '\n\n⚠️ 禁用后该用户将无法登录系统。' : ''}` : 
           '此操作需要管理员二次密码验证'
         }
         actionType={passwordModal.userData ? `确认${passwordModal.userData.action}` : '确认操作'}
         loading={passwordModal.loading}
       />
+
+
     </div>
   );
 };

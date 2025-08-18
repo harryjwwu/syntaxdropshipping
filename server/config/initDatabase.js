@@ -72,6 +72,9 @@ async function initializeDatabase() {
     // Insert initial data
     await insertInitialData(connection);
     
+    // Initialize enum settings
+    await initializeEnumSettings(connection);
+    
     console.log('🎉 Database initialization completed successfully!');
     
   } catch (error) {
@@ -93,7 +96,12 @@ async function insertInitialData(connection) {
     if (adminRows.length === 0) {
       const bcrypt = require('bcryptjs');
       const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash('admin123', salt);
+      const defaultPassword = process.env.DEFAULT_ADMIN_PASSWORD || 'admin123';
+      const hashedPassword = await bcrypt.hash(defaultPassword, salt);
+      
+      if (!process.env.DEFAULT_ADMIN_PASSWORD) {
+        console.warn('⚠️  警告：使用默认管理员密码，请在生产环境中设置 DEFAULT_ADMIN_PASSWORD 环境变量');
+      }
 
       // Insert admin user
       await connection.execute(
@@ -178,6 +186,58 @@ async function insertInitialData(connection) {
   }
 }
 
+// Function to initialize enum settings
+async function initializeEnumSettings(connection) {
+  try {
+    console.log('🔧 Initializing enum settings...');
+    
+    // 检查枚举值设置是否已存在
+    const [existingEnum] = await connection.execute(
+      'SELECT COUNT(*) as count FROM system_settings WHERE setting_type = ?',
+      ['enum_values']
+    );
+    
+    if (existingEnum[0].count === 0) {
+      // 初始化国家代码
+      const countryCodesData = {
+        setting_key: 'country_codes',
+        setting_value: JSON.stringify(['SE', 'FI', 'DK', 'NO', 'DE', 'NL', 'GB']),
+        setting_type: 'enum_values',
+        description: '系统支持的国家代码列表',
+        is_active: 1
+      };
+      
+      await connection.execute(
+        'INSERT INTO system_settings (setting_key, setting_value, setting_type, description, is_active) VALUES (?, ?, ?, ?, ?)',
+        [countryCodesData.setting_key, countryCodesData.setting_value, countryCodesData.setting_type, countryCodesData.description, countryCodesData.is_active]
+      );
+      
+      // 初始化物流方式
+      const logisticsMethodsData = {
+        setting_key: 'logistics_methods',
+        setting_value: JSON.stringify(['海运', '空运', '快递', '陆运']),
+        setting_type: 'enum_values',
+        description: '系统支持的物流方式列表',
+        is_active: 1
+      };
+      
+      await connection.execute(
+        'INSERT INTO system_settings (setting_key, setting_value, setting_type, description, is_active) VALUES (?, ?, ?, ?, ?)',
+        [logisticsMethodsData.setting_key, logisticsMethodsData.setting_value, logisticsMethodsData.setting_type, logisticsMethodsData.description, logisticsMethodsData.is_active]
+      );
+      
+      console.log('✅ Enum settings initialized');
+      console.log('  - Country codes: SE, FI, DK, NO, DE, NL, GB');
+      console.log('  - Logistics methods: 海运, 空运, 快递, 陆运');
+    } else {
+      console.log('✅ Enum settings already exist');
+    }
+  } catch (error) {
+    console.error('❌ Error initializing enum settings:', error);
+    throw error;
+  }
+}
+
 // Export function
 module.exports = {
   initializeDatabase
@@ -190,7 +250,7 @@ if (require.main === module) {
       console.log('\n🎉 Database setup complete!');
       console.log('\nDefault Admin Account:');
       console.log('  Email: admin@syntaxdropshipping.com');
-      console.log('  Password: admin123');
+      console.log(`  Password: ${process.env.DEFAULT_ADMIN_PASSWORD || 'admin123'}`);
       process.exit(0);
     })
     .catch((error) => {

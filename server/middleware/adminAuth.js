@@ -4,25 +4,34 @@ const { logAdminAction } = require('../utils/initAdmin');
 
 const authenticateAdmin = async (req, res, next) => {
   try {
+    console.log('🔐 [AUTH] 认证中间件开始 - 路径:', req.path);
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) {
+      console.log('❌ [AUTH] 没有token');
       return res.status(401).json({ 
         success: false,
         message: 'No token, authorization denied' 
       });
     }
 
+    console.log('🔐 [AUTH] Token存在，开始验证...');
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log('🔐 [AUTH] Token解码成功:', { adminId: decoded.adminId, email: decoded.email, role: decoded.role });
     
     // 验证管理员是否存在且活跃
     const db = await getConnection();
+    console.log('🔐 [AUTH] 查询管理员，adminId:', decoded.adminId);
     const [admins] = await db.execute(
       `SELECT id, username, email, name, role, permissions, is_active 
        FROM admins WHERE id = ?`, 
       [decoded.adminId]
     );
 
+    console.log('🔐 [AUTH] 管理员查询结果:', admins);
+    console.log('🔐 [AUTH] 查询结果数量:', admins.length);
+
     if (admins.length === 0 || !admins[0].is_active) {
+      console.log('❌ [AUTH] 管理员不存在或未激活');
       return res.status(403).json({ 
         success: false,
         message: 'Access denied, admin not found or inactive' 
@@ -33,6 +42,7 @@ const authenticateAdmin = async (req, res, next) => {
     req.admin = admins[0];
     req.adminId = admins[0].id;
 
+    console.log('✅ [AUTH] 认证成功，继续处理请求');
     next();
   } catch (error) {
     console.error('Admin authentication error:', error);

@@ -9,7 +9,9 @@ import {
   Menu, 
   X,
   Shield,
-  ChevronDown
+  ChevronDown,
+  Package,
+  DollarSign
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -25,6 +27,18 @@ const AdminLayout = () => {
       href: '/dashboard',
       icon: LayoutDashboard,
       permission: null // 所有管理员都可以访问
+    },
+    {
+      name: 'SPU管理',
+      href: '/spus',
+      icon: Package,
+      permission: 'system'
+    },
+    {
+      name: 'SPU报价管理',
+      href: '/spu-quotes',
+      icon: DollarSign,
+      permission: 'system'
     },
     {
       name: '充值管理',

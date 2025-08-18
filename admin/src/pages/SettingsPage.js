@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, CreditCard, Building, Mail, AlertCircle, CheckCircle, Percent } from 'lucide-react';
+import { Save, CreditCard, Building, Mail, AlertCircle, CheckCircle, Percent, List, Plus, X, Package } from 'lucide-react';
 import { adminAPI } from '../utils/api';
 import toast from 'react-hot-toast';
 
@@ -64,6 +64,11 @@ const SettingsPage = () => {
     }
   });
 
+  // 枚举值设置状态
+  const [enumSettings, setEnumSettings] = useState({});
+  const [editingEnum, setEditingEnum] = useState(null); // 当前编辑的枚举设置
+  const [newEnumValue, setNewEnumValue] = useState(''); // 新枚举值输入
+
   // 获取支付信息设置
   const fetchPaymentSettings = async () => {
     try {
@@ -83,8 +88,61 @@ const SettingsPage = () => {
     }
   };
 
+  // 获取枚举值设置
+  const fetchEnumSettings = async () => {
+    try {
+      console.log('🔍 开始获取枚举值设置...');
+      const response = await adminAPI.getEnumSettings();
+      console.log('📋 枚举值设置响应:', response);
+      
+      if (response.success) {
+        // 如果后端返回空数据，设置默认值
+        const enumData = response.data || {};
+        
+        // 设置默认的国家代码
+        if (!enumData.country_codes) {
+          enumData.country_codes = {
+            setting_value: ['SE', 'FI', 'DK', 'NO', 'DE', 'NL', 'GB'],
+            description: '系统支持的国家代码列表'
+          };
+        }
+        
+        // 设置默认的物流方式
+        if (!enumData.logistics_methods) {
+          enumData.logistics_methods = {
+            setting_value: ['海运', '空运', '快递', '陆运'],
+            description: '系统支持的物流方式列表'
+          };
+        }
+        
+        console.log('📋 设置枚举值数据:', enumData);
+        setEnumSettings(enumData);
+      }
+    } catch (error) {
+      console.error('获取枚举值设置失败:', error);
+      
+      // 如果获取失败，设置默认值
+      const defaultEnumSettings = {
+        country_codes: {
+          setting_value: ['SE', 'FI', 'DK', 'NO', 'DE', 'NL', 'GB'],
+          description: '系统支持的国家代码列表'
+        },
+        logistics_methods: {
+          setting_value: ['海运', '空运', '快递', '陆运'],
+          description: '系统支持的物流方式列表'
+        }
+      };
+      
+      console.log('📋 使用默认枚举值设置:', defaultEnumSettings);
+      setEnumSettings(defaultEnumSettings);
+      
+      toast.error('获取枚举值设置失败，已加载默认配置');
+    }
+  };
+
   useEffect(() => {
     fetchPaymentSettings();
+    fetchEnumSettings();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 更新支付信息字段
@@ -124,6 +182,361 @@ const SettingsPage = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  // 枚举值设置处理函数
+  const saveEnumSetting = async (key, values, description) => {
+    try {
+      setSaving(true);
+      const response = await adminAPI.updateEnumSetting(key, values, description);
+      if (response.success) {
+        toast.success('枚举值设置保存成功');
+        // 更新本地状态
+        setEnumSettings(prev => ({
+          ...prev,
+          [key]: response.data
+        }));
+        setEditingEnum(null);
+      }
+    } catch (error) {
+      console.error('保存枚举值设置失败:', error);
+      toast.error('保存枚举值设置失败: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const addEnumValue = (key, value) => {
+    if (!value.trim()) return;
+    
+    const currentValues = enumSettings[key]?.setting_value || [];
+    if (currentValues.includes(value.trim())) {
+      toast.error('该值已存在');
+      return;
+    }
+    
+    const newValues = [...currentValues, value.trim()];
+    setEnumSettings(prev => ({
+      ...prev,
+      [key]: {
+        ...prev[key],
+        setting_value: newValues
+      }
+    }));
+    setNewEnumValue('');
+  };
+
+  const removeEnumValue = (key, index) => {
+    const currentValues = enumSettings[key]?.setting_value || [];
+    const newValues = currentValues.filter((_, i) => i !== index);
+    setEnumSettings(prev => ({
+      ...prev,
+      [key]: {
+        ...prev[key],
+        setting_value: newValues
+      }
+    }));
+  };
+
+  // 渲染枚举值设置
+  const renderEnumSettings = () => {
+    return (
+      <div className="space-y-6">
+        {/* 国家代码设置 */}
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-100 rounded-lg mr-3">
+                <List className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-medium text-slate-900">国家代码设置</h3>
+                <p className="text-sm text-slate-500">配置系统支持的国家代码列表</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {/* 当前国家代码列表 */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-3">
+                当前已设置的值
+              </label>
+              <div className="flex flex-wrap gap-2 mb-4">
+                {(enumSettings.country_codes?.setting_value || []).map((code, index) => (
+                  <span
+                    key={index}
+                    className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800"
+                  >
+                    {code}
+                    <button
+                      onClick={() => removeEnumValue('country_codes', index)}
+                      className="ml-2 inline-flex items-center justify-center w-4 h-4 rounded-full text-blue-600 hover:bg-blue-200 hover:text-blue-800"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* 添加新国家代码 */}
+            <div className="flex items-center space-x-3">
+              <input
+                type="text"
+                value={editingEnum === 'country_codes' ? newEnumValue : ''}
+                onChange={(e) => setNewEnumValue(e.target.value.toUpperCase())}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    addEnumValue('country_codes', newEnumValue);
+                  }
+                }}
+                onFocus={() => setEditingEnum('country_codes')}
+                className="flex-1 px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="输入国家代码 (如: US, CN, JP)"
+                maxLength="3"
+              />
+              <button
+                onClick={() => addEnumValue('country_codes', newEnumValue)}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                添加
+              </button>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start">
+                <AlertCircle className="h-5 w-5 text-blue-400 mt-0.5 mr-3" />
+                <div>
+                  <h4 className="text-sm font-medium text-blue-800 mb-2">使用说明</h4>
+                  <div className="text-sm text-blue-700">
+                    <p className="mb-2">国家代码将在以下地方使用：</p>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>SPU报价管理中的国家选择</li>
+                      <li>用户注册时的国家选择</li>
+                      <li>订单管理中的国家筛选</li>
+                    </ul>
+                    <p className="mt-2 text-xs">建议使用ISO 3166-1 alpha-2标准的两位国家代码。当前已设置的值：SE, FI, DK, NO, DE, NL, GB</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 flex justify-end">
+            <button
+              onClick={() => saveEnumSetting(
+                'country_codes', 
+                enumSettings.country_codes?.setting_value || [],
+                '系统支持的国家代码列表'
+              )}
+              disabled={saving}
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {saving ? '保存中...' : '保存设置'}
+            </button>
+          </div>
+        </div>
+
+        {/* 物流方式设置 */}
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-green-100 rounded-lg mr-3">
+                <Package className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-medium text-slate-900">物流方式设置</h3>
+                <p className="text-sm text-slate-500">配置系统支持的物流方式列表</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {/* 当前物流方式列表 */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-3">
+                支持的物流方式
+              </label>
+              <div className="flex flex-wrap gap-2 mb-4">
+                {(enumSettings.logistics_methods?.setting_value || []).map((method, index) => (
+                  <span
+                    key={index}
+                    className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800"
+                  >
+                    {method}
+                    <button
+                      onClick={() => removeEnumValue('logistics_methods', index)}
+                      className="ml-2 inline-flex items-center justify-center w-4 h-4 rounded-full text-green-600 hover:bg-green-200 hover:text-green-800"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* 添加新物流方式 */}
+            <div className="flex items-center space-x-3">
+              <input
+                type="text"
+                value={editingEnum === 'logistics_methods' ? newEnumValue : ''}
+                onChange={(e) => setNewEnumValue(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    addEnumValue('logistics_methods', newEnumValue);
+                  }
+                }}
+                onFocus={() => setEditingEnum('logistics_methods')}
+                className="flex-1 px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                placeholder="输入物流方式 (如: 海运, 空运, 快递)"
+                maxLength="50"
+              />
+              <button
+                onClick={() => addEnumValue('logistics_methods', newEnumValue)}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                添加
+              </button>
+            </div>
+
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-start">
+                <AlertCircle className="h-5 w-5 text-green-400 mt-0.5 mr-3" />
+                <div>
+                  <h4 className="text-sm font-medium text-green-800 mb-2">使用说明</h4>
+                  <div className="text-sm text-green-700">
+                    <p className="mb-2">物流方式将在以下地方使用：</p>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>SPU创建和编辑时的物流方式选择</li>
+                      <li>SPU报价管理中的物流方式筛选</li>
+                      <li>订单管理中的物流方式显示</li>
+                    </ul>
+                    <p className="mt-2 text-xs">常见物流方式：海运、空运、快递、陆运等</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 flex justify-end">
+            <button
+              onClick={() => saveEnumSetting(
+                'logistics_methods', 
+                enumSettings.logistics_methods?.setting_value || [],
+                '系统支持的物流方式列表'
+              )}
+              disabled={saving}
+              className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {saving ? '保存中...' : '保存设置'}
+            </button>
+          </div>
+        </div>
+
+        {/* 快速设置预设值 */}
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+          <div className="flex items-center mb-6">
+            <div className="p-2 bg-purple-100 rounded-lg mr-3">
+              <CheckCircle className="h-5 w-5 text-purple-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-medium text-slate-900">快速设置预设值</h3>
+              <p className="text-sm text-slate-500">一键设置常用的枚举值</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* 国家代码预设 */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-slate-700">国家代码预设</h4>
+              <div className="space-y-2">
+                <button
+                  onClick={() => {
+                    const europeCountries = ['SE', 'FI', 'DK', 'NO', 'DE', 'NL', 'GB'];
+                    setEnumSettings(prev => ({
+                      ...prev,
+                      country_codes: {
+                        ...prev.country_codes,
+                        setting_value: europeCountries
+                      }
+                    }));
+                    toast.success('已设置欧洲国家代码');
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm border border-slate-300 rounded-md hover:bg-slate-50 focus:ring-2 focus:ring-blue-500"
+                >
+                  <div className="font-medium text-slate-900">欧洲主要国家</div>
+                  <div className="text-xs text-slate-500">SE, FI, DK, NO, DE, NL, GB</div>
+                </button>
+                <button
+                  onClick={() => {
+                    const allCountries = ['US', 'CA', 'GB', 'DE', 'FR', 'IT', 'ES', 'NL', 'BE', 'SE', 'NO', 'DK', 'FI', 'AU', 'JP', 'KR', 'CN', 'SG', 'HK', 'TW'];
+                    setEnumSettings(prev => ({
+                      ...prev,
+                      country_codes: {
+                        ...prev.country_codes,
+                        setting_value: allCountries
+                      }
+                    }));
+                    toast.success('已设置全球主要国家代码');
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm border border-slate-300 rounded-md hover:bg-slate-50 focus:ring-2 focus:ring-blue-500"
+                >
+                  <div className="font-medium text-slate-900">全球主要国家</div>
+                  <div className="text-xs text-slate-500">包含北美、欧洲、亚太等20个国家</div>
+                </button>
+              </div>
+            </div>
+
+            {/* 物流方式预设 */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-slate-700">物流方式预设</h4>
+              <div className="space-y-2">
+                <button
+                  onClick={() => {
+                    const commonLogistics = ['海运', '空运', '快递', '陆运'];
+                    setEnumSettings(prev => ({
+                      ...prev,
+                      logistics_methods: {
+                        ...prev.logistics_methods,
+                        setting_value: commonLogistics
+                      }
+                    }));
+                    toast.success('已设置常用物流方式');
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm border border-slate-300 rounded-md hover:bg-slate-50 focus:ring-2 focus:ring-green-500"
+                >
+                  <div className="font-medium text-slate-900">常用物流方式</div>
+                  <div className="text-xs text-slate-500">海运, 空运, 快递, 陆运</div>
+                </button>
+                <button
+                  onClick={() => {
+                    const detailedLogistics = ['海运整柜', '海运拼箱', '空运普通', '空运加急', 'DHL', 'UPS', 'FedEx', '顺丰', 'EMS', '中欧班列', '陆运整车', '陆运零担'];
+                    setEnumSettings(prev => ({
+                      ...prev,
+                      logistics_methods: {
+                        ...prev.logistics_methods,
+                        setting_value: detailedLogistics
+                      }
+                    }));
+                    toast.success('已设置详细物流方式');
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm border border-slate-300 rounded-md hover:bg-slate-50 focus:ring-2 focus:ring-green-500"
+                >
+                  <div className="font-medium text-slate-900">详细物流方式</div>
+                  <div className="text-xs text-slate-500">包含具体的承运商和服务类型</div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    );
   };
 
   // 渲染USD银行转账设置
@@ -767,6 +1180,16 @@ const SettingsPage = () => {
               佣金规则设置
             </button>
             <button
+              onClick={() => setActiveTab('enum')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'enum'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+              }`}
+            >
+              枚举值设置
+            </button>
+            <button
               onClick={() => setActiveTab('general')}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'general'
@@ -812,6 +1235,13 @@ const SettingsPage = () => {
             <div className="space-y-8">
               {/* 佣金规则设置 */}
               {renderCommissionRules()}
+            </div>
+          )}
+
+          {activeTab === 'enum' && (
+            <div className="space-y-8">
+              {/* 枚举值设置 */}
+              {renderEnumSettings()}
             </div>
           )}
 

@@ -19,8 +19,12 @@ async function initializeAdmin() {
     }
 
     // 创建默认超级管理员
-    const defaultPassword = 'admin123456';
+    const defaultPassword = process.env.DEFAULT_ADMIN_PASSWORD || 'admin123456';
     const hashedPassword = await bcrypt.hash(defaultPassword, 12);
+    
+    if (!process.env.DEFAULT_ADMIN_PASSWORD) {
+      console.warn('⚠️  警告：使用默认管理员密码，请在生产环境中设置 DEFAULT_ADMIN_PASSWORD 环境变量');
+    }
 
     await connection.execute(
       `INSERT INTO admins (username, email, password, name, role, permissions) 
@@ -43,7 +47,7 @@ async function initializeAdmin() {
 
     console.log('✅ Super admin created successfully');
     console.log('📧 Email: admin@syntaxdropshipping.com');
-    console.log('🔑 Password: admin123456');
+    console.log(`🔑 Password: ${defaultPassword}`);
     console.log('⚠️  Please change the default password after first login!');
 
   } catch (error) {

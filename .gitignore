@@ -11,11 +11,15 @@ dist/
 # Environment variables
 .env
 server/.env
+server/.env.bak
+server/.env.*
 client/.env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+.env.*
+.env.bak
 
 # Logs
 *.log

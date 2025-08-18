@@ -10,6 +10,12 @@ import DepositsPage from './pages/DepositsPage';
 import UsersPage from './pages/UsersPage';
 import UserDetailPage from './pages/UserDetailPage';
 import SettingsPage from './pages/SettingsPage';
+import SPUPage from './pages/SPUPage';
+import SPUDetailPage from './pages/SPUDetailPage';
+import SPUFormPage from './pages/SPUFormPage';
+import SPUQuotesPage from './pages/SPUQuotesPage';
+import SPUQuoteFormPage from './pages/SPUQuoteFormPage';
+import SPUPriceHistoryPage from './pages/SPUPriceHistoryPage';
 
 function App() {
   return (
@@ -28,10 +34,18 @@ function App() {
             }>
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<Dashboard />} />
-                                     <Route path="deposits" element={<DepositsPage />} />
-                       <Route path="users" element={<UsersPage />} />
-                       <Route path="users/:id" element={<UserDetailPage />} />
-                       <Route path="settings" element={<SettingsPage />} />
+              <Route path="spus" element={<SPUPage />} />
+              <Route path="spus/new" element={<SPUFormPage />} />
+              <Route path="spus/:spu" element={<SPUDetailPage />} />
+              <Route path="spus/:spu/edit" element={<SPUFormPage />} />
+              <Route path="spu-quotes" element={<SPUQuotesPage />} />
+              <Route path="spu-quotes/new" element={<SPUQuoteFormPage />} />
+              <Route path="spu-quotes/:id/edit" element={<SPUQuoteFormPage />} />
+              <Route path="spu-price-history" element={<SPUPriceHistoryPage />} />
+              <Route path="deposits" element={<DepositsPage />} />
+              <Route path="users" element={<UsersPage />} />
+              <Route path="users/:id" element={<UserDetailPage />} />
+              <Route path="settings" element={<SettingsPage />} />
             </Route>
             
             {/* 默认重定向 */}

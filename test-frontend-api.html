@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>前端API测试</title>
+</head>
+<body>
+    <h1>前端API测试</h1>
+    <div id="results"></div>
+    
+    <script>
+        const API_BASE = 'http://localhost:5001/api'\;
+        const results = document.getElementById('results');
+        
+        function log(message) {
+            results.innerHTML += '<p>' + message + '</p>';
+            console.log(message);
+        }
+        
+        async function testAPI() {
+            try {
+                // 1. 测试登录
+                log('🔐 测试管理员登录...');
+                const loginResponse = await fetch(`${API_BASE}/admin/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'admin@syntaxdropshipping.com',
+                        password: 'admin123456'
+                    })
+                });
+                
+                const loginData = await loginResponse.json();
+                
+                if (loginData.success) {
+                    const token = loginData.token;
+                    log('✅ 登录成功，Token: ' + token.substring(0, 20) + '...');
+                    
+                    // 2. 测试SPU列表API
+                    log('📋 测试SPU列表API...');
+                    const spuResponse = await fetch(`${API_BASE}/admin/spus?limit=1000`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    
+                    log('SPU API状态码: ' + spuResponse.status);
+                    
+                    if (spuResponse.ok) {
+                        const spuData = await spuResponse.json();
+                        log('✅ SPU API成功: ' + JSON.stringify(spuData).substring(0, 100) + '...');
+                    } else {
+                        const errorText = await spuResponse.text();
+                        log('❌ SPU API失败: ' + errorText);
+                    }
+                    
+                    // 3. 测试COS配置API
+                    log('🌐 测试COS配置API...');
+                    const cosResponse = await fetch(`${API_BASE}/cos/config`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    
+                    log('COS API状态码: ' + cosResponse.status);
+                    
+                    if (cosResponse.ok) {
+                        const cosData = await cosResponse.json();
+                        log('✅ COS API成功: ' + JSON.stringify(cosData));
+                    } else {
+                        const errorText = await cosResponse.text();
+                        log('❌ COS API失败: ' + errorText);
+                    }
+                    
+                } else {
+                    log('❌ 登录失败: ' + loginData.message);
+                }
+                
+            } catch (error) {
+                log('❌ 测试出错: ' + error.message);
+            }
+        }
+        
+        // 启动测试
+        testAPI();
+    </script>
+</body>
+</html>

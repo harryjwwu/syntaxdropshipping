@@ -1,0 +1,575 @@
+{
+  "generatedAt": "2025-08-15T10:44:25.564Z",
+  "version": "enhanced-v2.0",
+  "summary": {
+    "totalProcessed": 20,
+    "totalShopifyFound": 8,
+    "successRate": "40.0%",
+    "totalContacts": 206,
+    "emailBreakdown": {
+      "press": 3,
+      "corporate": 1,
+      "support": 4,
+      "contact": 2,
+      "other": 6,
+      "sales": 1,
+      "hr": 1
+    },
+    "topDomains": {
+      "www.glossier.com": 5,
+      "www.brooklinen.com": 4,
+      "www.gymshark.com": 3,
+      "www.allbirds.eu": 2,
+      "www.bombas.com": 1,
+      "www.casper.com": 1,
+      "www.fashionnova.com": 1,
+      "www.reebok.com": 1
+    }
+  },
+  "sites": [
+    {
+      "url": "https://www.gymshark.com",
+      "domain": "www.gymshark.com",
+      "title": "Gymshark Official Store - Gym Clothes & Workout Clothes",
+      "isShopify": true,
+      "shopifyIndicators": [
+        "shopify",
+        "cdn.shopify.com"
+      ],
+      "contacts": {
+        "emails": [
+          {
+            "email": "press@gymshark.com",
+            "source": "https://www.gymshark.com/pages/about-us",
+            "type": "press"
+          },
+          {
+            "email": "corporate@gymshark.com",
+            "source": "https://www.gymshark.com/pages/about-us",
+            "type": "corporate"
+          },
+          {
+            "email": "support@gymshark.com",
+            "source": "https://www.gymshark.com/contact",
+            "type": "support"
+          }
+        ],
+        "whatsapp": [],
+        "phones": [
+          "+10140-1018",
+          "+10190-1019"
+        ],
+        "social": {
+          "instagram": [
+            "https://www.instagram.com/gymshark"
+          ],
+          "facebook": [
+            "https://www.facebook.com/GymShark"
+          ],
+          "linkedin": [
+            "https://linkedin.com/shareArticle?mini=true&source=Gymshark&url=https%3A%2F%2Fsupport.gymshark.com%2Farticle%2Fcontact-us&title=Contact Us"
+          ],
+          "twitter": [
+            "https://www.twitter.com/gymshark",
+            "https://twitter.com/share?url=https%3A%2F%2Fsupport.gymshark.com%2Farticle%2Fcontact-us&text=Contact Us"
+          ],
+          "tiktok": [
+            "https://www.tiktok.com/@gymshark"
+          ]
+        }
+      },
+      "totalContacts": 11,
+      "processedAt": "2025-08-15T10:40:13.106Z",
+      "status": "success"
+    },
+    {
+      "url": "https://www.allbirds.eu",
+      "domain": "www.allbirds.eu",
+      "title": "Allbirds: Bequeme, Nachhaltige Schuhe & Sneaker",
+      "isShopify": true,
+      "shopifyIndicators": [
+        "shopify",
+        "cdn.shopify.com",
+        "shopify-section",
+        "shopify.theme",
+        "shopify-features",
+        "shopify.routes",
+        "shopify-features"
+      ],
+      "contacts": {
+        "emails": [
+          {
+            "email": "service@allbirds.de",
+            "source": "https://www.allbirds.eu",
+            "type": "support"
+          },
+          {
+            "email": "service@allbirds.eu",
+            "source": "https://www.allbirds.eu",
+            "type": "support"
+          }
+        ],
+        "whatsapp": [],
+        "phones": [
+          "+43 5522-72303",
+          "046-7124-4961"
+        ],
+        "social": {
+          "instagram": [
+            "https://www.instagram.com/allbirds"
+          ],
+          "facebook": [
+            "https://www.facebook.com/weareallbirds"
+          ],
+          "linkedin": [],
+          "twitter": [],
+          "tiktok": []
+        }
+      },
+      "totalContacts": 6,
+      "processedAt": "2025-08-15T10:40:42.173Z",
+      "status": "success"
+    },
+    {
+      "url": "https://www.bombas.com",
+      "domain": "www.bombas.com",
+      "title": "Bombas. Socks, Underwear, T-Shirts, Slippers designed for comfort, quality, and impact",
+      "isShopify": true,
+      "shopifyIndicators": [
+        "shopify",
+        "cdn.shopify.com"
+      ],
+      "contacts": {
+        "emails": [
+          {
+            "email": "hello@bombas.com",
+            "source": "https://www.bombas.com/corporate",
+            "type": "contact"
+          }
+        ],
+        "whatsapp": [],
+        "phones": [
+          "209-1433-4703"
+        ],
+        "social": {
+          "instagram": [
+            "https://www.instagram.com/bombas"
+          ],
+          "facebook": [
+            "https://www.facebook.com/bombassocks"
+          ],
+          "linkedin": [],
+          "twitter": [
+            "https://www.twitter.com/bombas"
+          ],
+          "tiktok": []
+        }
+      },
+      "totalContacts": 5,
+      "processedAt": "2025-08-15T10:41:19.889Z",
+      "status": "success"
+    },
+    {
+      "url": "https://www.glossier.com",
+      "domain": "www.glossier.com",
+      "title": "Glossier",
+      "isShopify": true,
+      "shopifyIndicators": [
+        "shopify",
+        "cdn.shopify.com",
+        "shopify-section",
+        "shopify.theme",
+        "shopify-features",
+        "shopify.routes",
+        "shopify-features"
+      ],
+      "contacts": {
+        "emails": [
+          {
+            "email": "gteam@glossier.com",
+            "source": "https://www.glossier.com/contact",
+            "type": "other"
+          },
+          {
+            "email": "brand@glossier.com",
+            "source": "https://www.glossier.com/contact",
+            "type": "other"
+          },
+          {
+            "email": "press@glossier.com",
+            "source": "https://www.glossier.com/contact",
+            "type": "press"
+          },
+          {
+            "email": "u003egteam@glossier.com",
+            "source": "https://www.glossier.com/help",
+            "type": "other"
+          },
+          {
+            "email": "your@email.com",
+            "source": "https://www.glossier.com/help",
+            "type": "other"
+          }
+        ],
+        "whatsapp": [],
+        "phones": [],
+        "social": {
+          "instagram": [
+            "https://www.instagram.com/glossier/"
+          ],
+          "facebook": [
+            "https://www.facebook.com/glossier"
+          ],
+          "linkedin": [],
+          "twitter": [],
+          "tiktok": [
+            "https://www.tiktok.com/@glossier"
+          ]
+        }
+      },
+      "totalContacts": 8,
+      "processedAt": "2025-08-15T10:41:45.045Z",
+      "status": "success"
+    },
+    {
+      "url": "https://www.casper.com",
+      "domain": "www.casper.com",
+      "title": "The Best Bed for Better Sleep | Casper Homepage",
+      "isShopify": true,
+      "shopifyIndicators": [
+        "shopify",
+        "cdn.shopify.com",
+        "shopify-section",
+        "shopify.theme",
+        "shopify-features",
+        "shopify.routes",
+        "shopify-features"
+      ],
+      "contacts": {
+        "emails": [
+          {
+            "email": "support@casper.com",
+            "source": "https://www.casper.com",
+            "type": "support"
+          }
+        ],
+        "whatsapp": [],
+        "phones": [
+          "+18884980003",
+          "888.498.0003",
+          "080-8444-5925",
+          "+1 888-498-0003",
+          "888-498-0003"
+        ],
+        "social": {
+          "instagram": [
+            "https://www.instagram.com/casper/"
+          ],
+          "facebook": [
+            "https://www.facebook.com/Casper/"
+          ],
+          "linkedin": [
+            "https://www.linkedin.com/company/casper/",
+            "https://www.linkedin.com/top-content?trk=organization_guest_guest_nav_menu_topContent",
+            "https://www.linkedin.com/pub/dir/+/+?trk=organization_guest_guest_nav_menu_people",
+            "https://www.linkedin.com/learning/search?trk=organization_guest_guest_nav_menu_learning",
+            "https://www.linkedin.com/jobs/search?trk=organization_guest_guest_nav_menu_jobs",
+            "https://www.linkedin.com/games?trk=organization_guest_guest_nav_menu_games",
+            "https://www.linkedin.com/signup/cold-join?session_redirect=https%3A%2F%2Fwww%2Elinkedin%2Ecom%2Fcompany%2Fcasper&trk=organization_guest_nav-header-join",
+            "https://www.linkedin.com/login?session_redirect=https%3A%2F%2Fwww%2Elinkedin%2Ecom%2Fcompany%2Fcasper&fromSignIn=true&trk=organization_guest_nav-header-signin",
+            "https://www.linkedin.com/jobs/casper-jobs-worldwide?f_C=3576156&trk=top-card_top-card-primary-button-top-card-primary-cta",
+            "https://www.linkedin.com/login?session_redirect=https%3A%2F%2Fwww%2Elinkedin%2Ecom%2Fcompany%2Fcasper&fromSignIn=true&trk=top-card_top-card-secondary-button-top-card-secondary-cta",
+            "https://www.linkedin.com/signup/cold-join?session_redirect=https%3A%2F%2Fwww%2Elinkedin%2Ecom%2Fsearch%2Fresults%2Fpeople%2F%3FfacetCurrentCompany%3D%255B3576156%255D&trk=org-employees_cta_face-pile-cta",
+            "/uas/login?fromSignIn=true&session_redirect=https%3A%2F%2Fwww.linkedin.com%2Fcompany%2Fcasper&trk=top-card_ellipsis-menu-semaphore-sign-in-redirect&guestReportContentType=COMPANY&_f=guest-reporting",
+            "https://www.linkedin.com/redir/redirect?url=http%3A%2F%2Fcasper%2Ecom&urlhash=wMa1&trk=about_website",
+            "https://www.linkedin.com/in/elise2?trk=org-employees",
+            "https://ca.linkedin.com/in/jdepankajarora?trk=org-employees",
+            "https://www.linkedin.com/in/leslie-kendall-5aa03a4?trk=org-employees",
+            "https://www.linkedin.com/in/marcbutakis?trk=org-employees",
+            "https://www.linkedin.com/signup/cold-join?session_redirect=https%3A%2F%2Fwww%2Elinkedin%2Ecom%2Fsearch%2Fresults%2Fpeople%2F%3FfacetCurrentCompany%3D%255B3576156%255D&trk=public_biz_employees-join",
+            "https://www.linkedin.com/posts/casper_why-choose-casper-mattresses-benefits-activity-7327786421602136065-ofcy",
+            "https://www.linkedin.com/company/casper?trk=organization_guest_main-feed-card_feed-actor-image",
+            "https://www.linkedin.com/company/casper?trk=organization_guest_main-feed-card_feed-actor-name",
+            "/uas/login?fromSignIn=true&session_redirect=https%3A%2F%2Fwww.linkedin.com%2Fcompany%2Fcasper&trk=organization_guest_main-feed-card_ellipsis-menu-semaphore-sign-in-redirect&guestReportContentType=POST&_f=guest-reporting",
+            "https://www.linkedin.com/redir/redirect?url=https%3A%2F%2Fcasper%2Ecom%2Fpages%2Fwhy-casper&urlhash=v_WT&trk=organization_guest_main-feed-card_feed-article-content",
+            "https://www.linkedin.com/signup/cold-join?session_redirect=https%3A%2F%2Fwww%2Elinkedin%2Ecom%2Fcompany%2Fcasper&trk=organization_guest_main-feed-card_social-actions-reactions",
+            "https://www.linkedin.com/signup/cold-join?session_redirect=https%3A%2F%2Fwww%2Elinkedin%2Ecom%2Fcompany%2Fcasper&trk=organization_guest_main-feed-card_social-actions-comments",
+            "https://www.linkedin.com/signup/cold-join?session_redirect=https%3A%2F%2Fwww%2Elinkedin%2Ecom%2Fcompany%2Fcasper&trk=organization_guest_main-feed-card_like-cta",
+            "https://www.linkedin.com/signup/cold-join?session_redirect=https%3A%2F%2Fwww%2Elinkedin%2Ecom%2Fcompany%2Fcasper&trk=organization_guest_main-feed-card_comment-cta",
+            "https://www.linkedin.com/signup/cold-join?session_redirect=https%3A%2F%2Fwww%2Elinkedin%2Ecom%2Fcompany%2Fcasper&trk=organization_guest_main-feed-card_share-cta",
+            "https://www.linkedin.com/signup/cold-join?session_redirect=https%3A%2F%2Fwww%2Elinkedin%2Ecom%2Fcompany%2Fcasper&trk=public_biz_promo-join",
+            "https://tr.linkedin.com/company/casperturkiye?trk=similar-pages",
+            "https://www.linkedin.com/company/purple-innovation-llc?trk=similar-pages",
+            "https://www.linkedin.com/company/slingshotai?trk=similar-pages",
+            "https://www.linkedin.com/company/tempur-pedic?trk=similar-pages",
+            "https://www.linkedin.com/company/saatva?trk=similar-pages",
+            "https://www.linkedin.com/company/brooklinen?trk=similar-pages",
+            "https://www.linkedin.com/company/warbyparker?trk=similar-pages",
+            "https://in.linkedin.com/company/purplle-com?trk=similar-pages",
+            "https://www.linkedin.com/company/serta-simmons-bedding-llc?trk=similar-pages",
+            "https://ca.linkedin.com/company/endy-sleep?trk=similar-pages",
+            "https://www.linkedin.com/jobs/casper-jobs?trk=organization_guest-browse_jobs",
+            "https://www.linkedin.com/jobs/analyst-jobs?trk=organization_guest-browse_jobs",
+            "https://www.linkedin.com/jobs/ecommerce-coordinator-jobs?trk=organization_guest-browse_jobs",
+            "https://www.linkedin.com/jobs/manager-jobs?trk=organization_guest-browse_jobs",
+            "https://www.linkedin.com/jobs/project-manager-jobs?trk=organization_guest-browse_jobs",
+            "https://www.linkedin.com/jobs/marketing-manager-jobs?trk=organization_guest-browse_jobs",
+            "https://www.linkedin.com/jobs/associate-jobs?trk=organization_guest-browse_jobs",
+            "https://www.linkedin.com/jobs/coordinator-jobs?trk=organization_guest-browse_jobs",
+            "https://www.linkedin.com/jobs/account-executive-jobs?trk=organization_guest-browse_jobs",
+            "https://www.linkedin.com/jobs/engineer-jobs?trk=organization_guest-browse_jobs",
+            "https://www.linkedin.com/jobs/intern-jobs?trk=organization_guest-browse_jobs",
+            "https://www.linkedin.com/jobs/account-manager-jobs?trk=organization_guest-browse_jobs",
+            "https://www.linkedin.com/jobs/specialist-jobs?trk=organization_guest-browse_jobs",
+            "https://www.linkedin.com/jobs/marketing-director-jobs?trk=organization_guest-browse_jobs",
+            "https://www.linkedin.com/jobs/recruiter-jobs?trk=organization_guest-browse_jobs",
+            "https://www.linkedin.com/jobs/executive-jobs?trk=organization_guest-browse_jobs",
+            "https://www.linkedin.com/jobs/vice-president-jobs?trk=organization_guest-browse_jobs",
+            "https://www.linkedin.com/jobs/scientist-jobs?trk=organization_guest-browse_jobs",
+            "https://www.linkedin.com/jobs/planner-jobs?trk=organization_guest-browse_jobs",
+            "https://www.linkedin.com/jobs/assistant-jobs?trk=organization_guest-browse_jobs",
+            "https://www.linkedin.com/jobs/casper-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/analyst-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/engineer-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/manager-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/scientist-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/data-analyst-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/marketing-analyst-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/director-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/project-manager-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/developer-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/data-scientist-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/merchandising-assistant-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/coordinator-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/assistant-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/account-coordinator-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/marketing-manager-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/associate-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/merchandise-coordinator-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/coach-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/ecommerce-coordinator-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/planner-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/software-engineer-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/designer-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/account-executive-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/editor-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/customer-associate-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/marketing-operations-coordinator-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/senior-analyst-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/merchandiser-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/account-manager-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/business-analyst-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/senior-data-analyst-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/wholesaler-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/assistant-buyer-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/writer-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/support-specialist-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/buyer-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/business-development-specialist-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/customer-service-representative-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/regional-recruiter-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/merchandise-planner-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/marketing-coordinator-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/recruiter-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/senior-operations-manager-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/director-of-interior-design-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/editorial-coordinator-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/magazine-editor-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/pilates-instructor-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/technical-specialist-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/risk-analyst-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/marketing-associate-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/human-resources-specialist-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/partnerships-coordinator-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/data-engineer-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/information-technology-recruiter-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/grants-writer-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/english-specialist-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/ecommerce-manager-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/press-secretary-jobs?trk=organization_guest_linkster_link",
+            "https://www.linkedin.com/jobs/publisher-jobs?trk=organization_guest_linkster_link",
+            "https://about.linkedin.com?trk=d_org_guest_company_overview_footer-about",
+            "https://www.linkedin.com/accessibility?trk=d_org_guest_company_overview_footer-accessibility",
+            "https://www.linkedin.com/legal/user-agreement?trk=d_org_guest_company_overview_footer-user-agreement",
+            "https://www.linkedin.com/legal/privacy-policy?trk=d_org_guest_company_overview_footer-privacy-policy",
+            "https://www.linkedin.com/legal/cookie-policy?trk=d_org_guest_company_overview_footer-cookie-policy",
+            "https://www.linkedin.com/legal/copyright-policy?trk=d_org_guest_company_overview_footer-copyright-policy",
+            "https://brand.linkedin.com/policies?trk=d_org_guest_company_overview_footer-brand-policy",
+            "https://www.linkedin.com/psettings/guest-controls?trk=d_org_guest_company_overview_footer-guest-controls",
+            "https://www.linkedin.com/legal/professional-community-policies?trk=d_org_guest_company_overview_footer-community-guide",
+            "https://www.linkedin.com/uas/request-password-reset?trk=organization_guest_contextual-sign-in-modal_sign-in-modal_forgot_password",
+            "https://www.linkedin.com/signup/cold-join?session_redirect=https%3A%2F%2Fwww%2Elinkedin%2Ecom%2Fcompany%2Fcasper&trk=organization_guest_contextual-sign-in-modal_sign-in-modal_join-link",
+            "https://www.linkedin.com/signup/cold-join?session_redirect=https%3A%2F%2Fwww%2Elinkedin%2Ecom%2Fcompany%2Fcasper&trk=organization_guest_contextual-sign-in-modal_join-link"
+          ],
+          "twitter": [
+            "https://x.com/casper"
+          ],
+          "tiktok": []
+        }
+      },
+      "totalContacts": 140,
+      "processedAt": "2025-08-15T10:42:09.288Z",
+      "status": "success"
+    },
+    {
+      "url": "https://www.fashionnova.com",
+      "domain": "www.fashionnova.com",
+      "title": "Fashion Nova | Fashion Online For Women | Affordable Women's Clothing | Fashion NovaSearch AI IconSearch AI Icon",
+      "isShopify": true,
+      "shopifyIndicators": [
+        "shopify",
+        "cdn.shopify.com"
+      ],
+      "contacts": {
+        "emails": [
+          {
+            "email": "e7c5d00f7ff26a82791e5ece4cbfb27c@o4504566675341312.ingest.sentry.io",
+            "source": "https://www.fashionnova.com",
+            "type": "other"
+          }
+        ],
+        "whatsapp": [],
+        "phones": [
+          "(818) 347-6500",
+          "488-4362-9940",
+          "024-2692-4903"
+        ],
+        "social": {
+          "instagram": [
+            "https://www.instagram.com/fashionnova",
+            "https://instagram.com/fashionnova"
+          ],
+          "facebook": [
+            "https://www.facebook.com/FashionNova"
+          ],
+          "linkedin": [],
+          "twitter": [],
+          "tiktok": [
+            "https://www.tiktok.com/@fashionnova"
+          ]
+        }
+      },
+      "totalContacts": 8,
+      "processedAt": "2025-08-15T10:42:48.516Z",
+      "status": "success"
+    },
+    {
+      "url": "https://www.brooklinen.com",
+      "domain": "www.brooklinen.com",
+      "title": "Brooklinen® | Best in Bed\n  Brooklinen® | Best in Bed\nRated 5 stars out of 5 by over 100,000 customersRated 5 stars out of 5 by over 100,000 customersRated 5 stars out of 5 by over 100,000 customers",
+      "isShopify": true,
+      "shopifyIndicators": [
+        "shopify",
+        "cdn.shopify.com",
+        "shopify-section",
+        "shopify.theme",
+        "shopify-features",
+        "shopify.routes",
+        "shopify-features"
+      ],
+      "contacts": {
+        "emails": [
+          {
+            "email": "hello@brooklinen.com",
+            "source": "https://www.brooklinen.com/contact",
+            "type": "contact"
+          },
+          {
+            "email": "press@brooklinen.com",
+            "source": "https://www.brooklinen.com/contact",
+            "type": "press"
+          },
+          {
+            "email": "sales@brooklinenbusiness.com",
+            "source": "https://www.brooklinen.com/contact",
+            "type": "sales"
+          },
+          {
+            "email": "influencer@brooklinen.com",
+            "source": "https://www.brooklinen.com/contact",
+            "type": "other"
+          }
+        ],
+        "whatsapp": [],
+        "phones": [
+          "401-9844-4588",
+          "646-798-7447",
+          "630-9340-5078"
+        ],
+        "social": {
+          "instagram": [
+            "https://www.instagram.com/brooklinen/",
+            "https://www.instagram.com/sylviatribel/",
+            "https://www.instagram.com/rocamoons/",
+            "https://www.instagram.com/eclectically.jem/",
+            "https://www.instagram.com/tarynnewton/",
+            "https://www.instagram.com/adognamedesther/",
+            "https://www.instagram.com/mariaaamarzullo/"
+          ],
+          "facebook": [
+            "https://www.facebook.com/Brooklinen/"
+          ],
+          "linkedin": [],
+          "twitter": [],
+          "tiktok": []
+        }
+      },
+      "totalContacts": 15,
+      "processedAt": "2025-08-15T10:43:29.748Z",
+      "status": "success"
+    },
+    {
+      "url": "https://www.reebok.com",
+      "domain": "www.reebok.com",
+      "title": "Reebok® Official Site | Life is Not a Spectator Sport",
+      "isShopify": true,
+      "shopifyIndicators": [
+        "shopify",
+        "cdn.shopify.com",
+        "shopify-section",
+        "shopify.theme",
+        "shopify-features",
+        "shopify.routes",
+        "shopify-features"
+      ],
+      "contacts": {
+        "emails": [
+          {
+            "email": "careers@reebok.com",
+            "source": "https://www.reebok.com/pages/careers",
+            "type": "hr"
+          }
+        ],
+        "whatsapp": [],
+        "phones": [
+          "798-8750-6382",
+          "939-4587-9544",
+          "045-3137-4114",
+          "072-8808-6686",
+          "475-7721-4697",
+          "982-4992-8143",
+          "967-3644-4824",
+          "(866) 870-1743"
+        ],
+        "social": {
+          "instagram": [
+            "https://www.instagram.com/reebok/"
+          ],
+          "facebook": [
+            "https://www.facebook.com/Reebok/"
+          ],
+          "linkedin": [],
+          "twitter": [
+            "https://x.com/Reebok"
+          ],
+          "tiktok": [
+            "https://www.tiktok.com/@reebok"
+          ]
+        }
+      },
+      "totalContacts": 13,
+      "processedAt": "2025-08-15T10:44:10.875Z",
+      "status": "success"
+    }
+  ]
+}

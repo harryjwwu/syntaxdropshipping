@@ -3,19 +3,36 @@ import axios from 'axios';
 // 创建axios实例
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5001/api',
-  timeout: 10000,
+  timeout: 30000, // 增加超时时间到30秒
+  withCredentials: true, // 确保发送cookies
+  headers: {
+    'Content-Type': 'application/json',
+  }
+});
+
+console.log('🔧 Axios实例配置:', {
+  baseURL: api.defaults.baseURL,
+  timeout: api.defaults.timeout,
+  withCredentials: api.defaults.withCredentials
 });
 
 // 请求拦截器 - 添加管理员token
 api.interceptors.request.use(
   (config) => {
     const adminToken = localStorage.getItem('adminToken');
+    console.log('🔍 API请求拦截器 - URL:', config.url);
+    console.log('🔑 Token状态:', adminToken ? `存在 (${adminToken.substring(0, 20)}...)` : '不存在');
+    
     if (adminToken) {
       config.headers.Authorization = `Bearer ${adminToken}`;
+      console.log('✅ 已添加Authorization头');
+    } else {
+      console.warn('⚠️ 没有找到adminToken');
     }
     return config;
   },
   (error) => {
+    console.error('❌ 请求拦截器错误:', error);
     return Promise.reject(error);
   }
 );
@@ -23,9 +40,34 @@ api.interceptors.request.use(
 // 响应拦截器 - 处理token过期等错误
 api.interceptors.response.use(
   (response) => {
+    console.log('✅ API响应成功 - URL:', response.config.url, '状态:', response.status);
     return response.data;
   },
   (error) => {
+    console.error('❌ API响应错误 - URL:', error.config?.url);
+    console.error('错误类型:', error.code);
+    console.error('错误状态:', error.response?.status);
+    console.error('错误信息:', error.response?.data || error.message);
+    
+    // 详细的网络错误诊断
+    if (error.code === 'NETWORK_ERROR' || error.message === 'Network Error') {
+      console.error('🌐 网络错误详情:');
+      console.error('- 请求URL:', error.config?.url);
+      console.error('- 基础URL:', error.config?.baseURL);
+      console.error('- 完整URL:', error.config?.baseURL + error.config?.url);
+      console.error('- 请求方法:', error.config?.method);
+      console.error('- 请求头:', error.config?.headers);
+      
+      // 尝试ping后端服务器
+      fetch('http://localhost:5001/api/health')
+        .then(response => {
+          console.log('✅ 后端服务器可达，状态:', response.status);
+        })
+        .catch(fetchError => {
+          console.error('❌ 后端服务器不可达:', fetchError.message);
+        });
+    }
+    
     if (error.response?.status === 401) {
       const errorMessage = error.response?.data?.message || '';
       
@@ -35,6 +77,7 @@ api.interceptors.response.use(
           errorMessage.includes('Unauthorized') || 
           errorMessage.includes('Invalid token') ||
           errorMessage.includes('Token expired')) {
+        console.warn('🔑 Token过期，清除登录状态');
         // Token过期或无效，清除本地存储并跳转到登录页
         localStorage.removeItem('adminToken');
         localStorage.removeItem('adminUser');
@@ -104,8 +147,79 @@ export const adminAPI = {
   // 禁用/启用用户账户
   toggleUserStatus: (id, is_active, verification_password) => api.put(`/admin/users/${id}/toggle-status`, { is_active, verification_password }),
   
+  // 绑定店小秘客户ID
+  bindDxmClient: (userId, dxmClientId, adminPassword) => api.post('/admin/bind-dxm-client', { 
+    userId, 
+    dxmClientId, 
+    adminPassword 
+  }),
+  
   // 验证管理员二次密码
   verifyAdminPassword: (password) => api.post('/admin/verify-admin-password', { password }),
+
+  // ==================== SPU管理 API ====================
+  // 获取SPU列表
+  getSpus: (params) => api.get('/admin/spus', { params }),
+  
+  // 获取单个SPU详情
+  getSpu: (spu) => api.get(`/admin/spus/${spu}`),
+  
+  // 创建SPU
+  createSpu: (spuData) => api.post('/admin/spus', spuData),
+  
+  // 更新SPU
+  updateSpu: (spu, spuData) => api.put(`/admin/spus/${spu}`, spuData),
+  
+  // 删除SPU
+  deleteSpu: (spu) => api.delete(`/admin/spus/${spu}`),
+  
+  // 为SPU添加SKU
+  addSkuToSpu: (spu, sku) => api.post(`/admin/spus/${spu}/skus`, { sku }),
+  
+  // 删除SPU下的SKU
+  removeSkuFromSpu: (spu, sku) => api.delete(`/admin/spus/${spu}/skus/${sku}`),
+
+  // ==================== SPU报价管理 API ====================
+  // 获取SPU报价列表
+  getSpuQuotes: (params) => api.get('/admin/spu-quotes', { params }),
+  
+  // 获取单个报价详情
+  getSpuQuote: (id) => api.get(`/admin/spu-quotes/${id}`),
+  
+  // 创建报价
+  createSpuQuote: (quoteData) => api.post('/admin/spu-quotes', quoteData),
+  
+  // 更新报价
+  updateSpuQuote: (id, quoteData) => api.put(`/admin/spu-quotes/${id}`, quoteData),
+  
+  // 删除报价
+  deleteSpuQuote: (id) => api.delete(`/admin/spu-quotes/${id}`),
+  
+  // 批量创建报价
+  batchCreateSpuQuotes: (quotes) => api.post('/admin/spu-quotes/batch', { quotes }),
+  
+  // 批量删除报价
+  batchDeleteSpuQuotes: (ids) => api.delete('/admin/spu-quotes/batch', { data: { ids } }),
+  
+  // 获取国家列表
+  getCountries: () => api.get('/admin/spu-quotes/countries/list'),
+
+  // ==================== SPU价格历史 API ====================
+  // 获取价格变更历史列表
+  getSpuPriceHistory: (params) => api.get('/admin/spu-price-history', { params }),
+  
+  // 获取特定SPU的价格历史
+  getSpuPriceHistoryBySpu: (spu, params) => api.get(`/admin/spu-price-history/spu/${spu}`, { params }),
+  
+  // 获取价格变更统计
+  getSpuPriceHistoryStats: (params) => api.get('/admin/spu-price-history/stats', { params }),
+
+  // ==================== COS上传 API ====================
+  // 获取COS配置
+  getCOSConfig: () => api.get('/cos/config'),
+  
+  // 服务端上传到COS
+  uploadImageToCOS: (formData) => api.post('/cos/upload', formData),
 
   // ==================== 系统设置 API ====================
   // 获取支付信息设置
@@ -121,7 +235,49 @@ export const adminAPI = {
   getSystemSetting: (key) => api.get(`/settings/${key}`),
   
   // 更新系统设置
-  updateSystemSetting: (key, setting_value, description) => api.put(`/settings/${key}`, { setting_value, description })
+  updateSystemSetting: (key, setting_value, description) => api.put(`/settings/${key}`, { setting_value, description }),
+  
+  // 枚举值设置
+  getEnumSettings: () => api.get('/settings/enum-values'),
+  getEnumSetting: (key) => api.get(`/settings/enum-values/${key}`),
+  updateEnumSetting: (key, values, description) => api.put(`/settings/enum-values/${key}`, { values, description }),
+  
+  // SPU管理
+  getSpus: (params = {}) => api.get('/admin/spus', { params }),
+  getSpu: (spu) => api.get(`/admin/spus/${spu}`),
+  createSpu: (data) => api.post('/admin/spus', data),
+  updateSpu: (spu, data) => api.put(`/admin/spus/${spu}`, data),
+  deleteSpu: (spu) => api.delete(`/admin/spus/${spu}`),
+  
+  // SPU批量导入
+  importSpus: (formData) => {
+    return api.post('/admin/spu-batch-import/import', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      timeout: 60000, // 60秒超时，批量导入可能需要较长时间
+    });
+  },
+  downloadSpuTemplate: () => {
+    return api.get('/admin/spu-batch-import/template', {
+      responseType: 'blob'
+    });
+  },
+  
+  // SPU报价管理
+  getSpuQuotes: (params = {}) => api.get('/admin/spu-quotes', { params }),
+  getSpuQuote: (id) => api.get(`/admin/spu-quotes/${id}`),
+  createSpuQuote: (data) => api.post('/admin/spu-quotes', data),
+  updateSpuQuote: (id, data) => api.put(`/admin/spu-quotes/${id}`, data),
+  deleteSpuQuote: (id) => api.delete(`/admin/spu-quotes/${id}`),
+  
+  // SPU价格历史
+  getSpuPriceHistory: (params = {}) => api.get('/admin/spu-price-history', { params }),
+  
+  // COS相关
+  getCOSConfig: () => api.get('/cos/config'),
+  getCOSUploadSignature: (fileName, fileType = 'images') => api.post('/cos/signature', { fileName, fileType }),
+  deleteCOSFile: (data) => api.delete('/cos/delete', { data })
 };
 
 // 工具函数

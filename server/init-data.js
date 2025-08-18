@@ -27,7 +27,12 @@ async function initializeData() {
     } catch (error) {
       const bcrypt = require('bcryptjs');
       const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash('admin123', salt);
+      const defaultPassword = process.env.DEFAULT_ADMIN_PASSWORD || 'admin123';
+      const hashedPassword = await bcrypt.hash(defaultPassword, salt);
+      
+      if (!process.env.DEFAULT_ADMIN_PASSWORD) {
+        console.warn('⚠️  警告：使用默认管理员密码，请在生产环境中设置 DEFAULT_ADMIN_PASSWORD 环境变量');
+      }
 
       const adminUser = {
         id: 'admin-1',
@@ -41,7 +46,7 @@ async function initializeData() {
       };
 
       await fs.writeFile(usersFile, JSON.stringify([adminUser], null, 2));
-      console.log('✅ Admin user created (admin@syntaxdropshipping.com / admin123)');
+      console.log(`✅ Admin user created (admin@syntaxdropshipping.com / ${defaultPassword})`);
     }
 
     console.log('');
@@ -49,7 +54,7 @@ async function initializeData() {
     console.log('');
     console.log('Default Admin Account:');
     console.log('  Email: admin@syntaxdropshipping.com');
-    console.log('  Password: admin123');
+    console.log(`  Password: ${process.env.DEFAULT_ADMIN_PASSWORD || 'admin123'}`);
     console.log('');
     console.log('You can now start the server with: npm run server');
 

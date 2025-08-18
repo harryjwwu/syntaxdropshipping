@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>网络连接测试</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <h1>网络连接测试</h1>
+    <div id="results"></div>
+    
+    <script>
+        const results = document.getElementById('results');
+        
+        function log(message) {
+            results.innerHTML += '<p>' + message + '</p>';
+            console.log(message);
+        }
+        
+        async function testNetwork() {
+            try {
+                log('🔍 开始网络测试...');
+                
+                // 1. 测试基础连接
+                log('1. 测试基础HTTP连接...');
+                const healthResponse = await fetch('http://localhost:5001/api/health');
+                log('✅ 基础连接成功: ' + healthResponse.status);
+                
+                // 2. 测试axios配置
+                log('2. 测试axios配置...');
+                const axiosInstance = axios.create({
+                    baseURL: 'http://localhost:5001/api',
+                    timeout: 10000,
+                });
+                
+                // 添加请求拦截器
+                axiosInstance.interceptors.request.use(config => {
+                    log('📤 axios请求: ' + config.method.toUpperCase() + ' ' + config.url);
+                    return config;
+                });
+                
+                // 添加响应拦截器
+                axiosInstance.interceptors.response.use(
+                    response => {
+                        log('✅ axios响应成功: ' + response.status);
+                        return response;
+                    },
+                    error => {
+                        log('❌ axios响应失败: ' + error.message);
+                        if (error.response) {
+                            log('错误状态: ' + error.response.status);
+                        } else if (error.request) {
+                            log('网络错误: 请求已发送但无响应');
+                        } else {
+                            log('配置错误: ' + error.message);
+                        }
+                        return Promise.reject(error);
+                    }
+                );
+                
+                // 3. 测试登录API
+                log('3. 测试登录API...');
+                const loginResponse = await axiosInstance.post('/admin/login', {
+                    email: 'admin@syntaxdropshipping.com',
+                    password: 'admin123456'
+                });
+                
+                const token = loginResponse.data.token;
+                log('✅ 登录成功，Token: ' + token.substring(0, 20) + '...');
+                
+                // 4. 测试SPU API
+                log('4. 测试SPU API...');
+                axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+                
+                const spuResponse = await axiosInstance.get('/admin/spus?page=1&limit=20');
+                log('✅ SPU API成功: ' + JSON.stringify(spuResponse.data).substring(0, 100) + '...');
+                
+            } catch (error) {
+                log('❌ 测试失败: ' + error.message);
+                console.error('详细错误:', error);
+            }
+        }
+        
+        // 启动测试
+        testNetwork();
+    </script>
+</body>
+</html>

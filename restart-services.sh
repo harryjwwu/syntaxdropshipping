@@ -24,6 +24,10 @@ pkill -f "node server.js" 2>/dev/null || echo "    后端服务器未运行"
 echo "  - 停止前端服务器..."
 pkill -f "react-scripts" 2>/dev/null || echo "    前端服务器未运行"
 
+# 杀掉管理后台 React 进程
+echo "  - 停止管理后台服务器..."
+pkill -f "admin.*react-scripts" 2>/dev/null || echo "    管理后台服务器未运行"
+
 # 等待进程完全停止
 echo "  - 等待进程停止..."
 sleep 3
@@ -39,6 +43,12 @@ fi
 if lsof -i :3000 >/dev/null 2>&1; then
     echo -e "${RED}  ⚠️ 端口 3000 仍被占用，强制终止...${NC}"
     lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+    sleep 2
+fi
+
+if lsof -i :3001 >/dev/null 2>&1; then
+    echo -e "${RED}  ⚠️ 端口 3001 仍被占用，强制终止...${NC}"
+    lsof -ti:3001 | xargs kill -9 2>/dev/null || true
     sleep 2
 fi
 
@@ -83,11 +93,30 @@ else
     exit 1
 fi
 
-# 5. 服务状态检查
+# 5. 启动管理后台服务器
+echo -e "${BLUE}🔧 启动管理后台服务器...${NC}"
+cd admin
+nohup npm start > ../admin.log 2>&1 &
+ADMIN_PID=$!
+cd ..
+
+# 等待管理后台启动
+echo "  - 等待管理后台编译完成..."
+sleep 15
+
+# 检查管理后台是否启动成功
+if lsof -i :3001 >/dev/null 2>&1; then
+    echo -e "${GREEN}  ✅ 管理后台服务器启动成功 (PID: $ADMIN_PID) - http://localhost:3001${NC}"
+else
+    echo -e "${RED}  ❌ 管理后台服务器启动失败${NC}"
+    echo "查看日志: tail -f admin.log"
+fi
+
+# 6. 服务状态检查
 echo -e "${BLUE}🔍 服务状态检查...${NC}"
 
 # 检查后端API
-if curl -s http://localhost:5001/api/verification/send-code -X POST -H "Content-Type: application/json" -d '{"email":"test@example.com"}' >/dev/null 2>&1; then
+if curl -s http://localhost:5001/api/health >/dev/null 2>&1; then
     echo -e "${GREEN}  ✅ 后端API正常响应${NC}"
 else
     echo -e "${RED}  ⚠️ 后端API响应异常${NC}"
@@ -100,19 +129,29 @@ else
     echo -e "${RED}  ⚠️ 前端页面加载异常${NC}"
 fi
 
+# 检查管理后台页面
+if curl -s http://localhost:3001 >/dev/null 2>&1; then
+    echo -e "${GREEN}  ✅ 管理后台页面正常加载${NC}"
+else
+    echo -e "${RED}  ⚠️ 管理后台页面加载异常${NC}"
+fi
+
 echo ""
 echo -e "${GREEN}🎉 服务重启完成！${NC}"
 echo ""
 echo -e "${BLUE}📊 服务信息：${NC}"
 echo "  - 后端服务器: http://localhost:5001 (PID: $BACKEND_PID)"
 echo "  - 前端服务器: http://localhost:3000 (PID: $FRONTEND_PID)"
+echo "  - 管理后台:   http://localhost:3001 (PID: $ADMIN_PID)"
 echo "  - 注册页面:   http://localhost:3000/register"
+echo "  - 管理登录:   http://localhost:3001/login"
 echo ""
 echo -e "${YELLOW}📝 日志文件：${NC}"
 echo "  - 后端日志: tail -f backend.log"
 echo "  - 前端日志: tail -f frontend.log"
+echo "  - 管理后台日志: tail -f admin.log"
 echo ""
 echo -e "${BLUE}🛠️ 常用命令：${NC}"
-echo "  - 查看进程: lsof -i :5001 && lsof -i :3000"
+echo "  - 查看进程: lsof -i :5001 && lsof -i :3000 && lsof -i :3001"
 echo "  - 停止服务: pkill -f 'node server.js' && pkill -f 'react-scripts'"
 echo ""
