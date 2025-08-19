@@ -11,7 +11,8 @@ import {
   Shield,
   ChevronDown,
   Package,
-  DollarSign
+  DollarSign,
+  ShoppingCart
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -38,6 +39,12 @@ const AdminLayout = () => {
       name: 'SPU报价管理',
       href: '/spu-quotes',
       icon: DollarSign,
+      permission: 'system'
+    },
+    {
+      name: '订单管理',
+      href: '/orders',
+      icon: ShoppingCart,
       permission: 'system'
     },
     {

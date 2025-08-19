@@ -1,0 +1,35 @@
+-- 创建异常订单表，用于存储无法解析客户ID的订单
+-- 字段结构与orders_0表完全一样
+
+CREATE TABLE IF NOT EXISTS `order_abnormal` (
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `dxm_order_id` varchar(50) NOT NULL COMMENT 'DXM订单号，格式可能异常',
+  `dxm_client_id` int DEFAULT NULL COMMENT 'DXM客户ID，异常订单可能为NULL',
+  `order_id` int DEFAULT NULL COMMENT '真实订单ID，异常订单可能为NULL',
+  `country_code` varchar(5) DEFAULT NULL COMMENT '国家二字码',
+  `product_count` int DEFAULT 1 COMMENT '商品数量',
+  `buyer_name` varchar(100) DEFAULT NULL COMMENT '买家姓名',
+  `product_name` text COMMENT '产品名称',
+  `payment_time` datetime DEFAULT NULL COMMENT '付款时间',
+  `waybill_number` varchar(50) DEFAULT NULL COMMENT '运单号',
+  `product_sku` varchar(50) DEFAULT NULL COMMENT '商品SKU',
+  `product_spu` varchar(50) DEFAULT NULL COMMENT '商品SPU',
+  `product_parent_spu` varchar(50) DEFAULT NULL COMMENT '替换SPU',
+  `unit_price` decimal(10,2) DEFAULT 0.00 COMMENT '单价（美元）',
+  `multi_total_price` decimal(10,2) DEFAULT 0.00 COMMENT '总价（美元）',
+  `discount` decimal(5,2) DEFAULT 0.00 COMMENT '折扣',
+  `settlement_amount` decimal(10,2) DEFAULT 0.00 COMMENT '结算金额',
+  `remark` text DEFAULT NULL COMMENT '备注信息：JSON格式字符串 {customer_remark, picking_remark, order_remark}',
+  `order_status` enum('全部','未付款','风控中','待审核','待处理','待打单（有货）','待打单（缺货）','待打单（异常）','已发货','已退款','已忽略','已处理','已审核') DEFAULT NULL COMMENT '订单状态',
+  `settlement_status` enum('waiting','cancel','settled') DEFAULT 'waiting' COMMENT '结算状态',
+  `settle_remark` text COMMENT '结算算法说明',
+  `parse_error` text COMMENT '解析错误信息',
+  `created_at` timestamp DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_abnormal_order_product` (`dxm_order_id`, `product_sku`, `product_name`(100)) COMMENT '异常订单+商品唯一约束',
+  KEY `idx_dxm_order_id` (`dxm_order_id`) COMMENT 'DXM订单号索引',
+  KEY `idx_order_status` (`order_status`) COMMENT '订单状态索引',
+  KEY `idx_settlement_status` (`settlement_status`) COMMENT '结算状态索引',
+  KEY `idx_created_at` (`created_at`) COMMENT '创建时间索引'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='异常订单表（无法解析客户ID的订单）';

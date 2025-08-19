@@ -1,0 +1,17 @@
+🧪 测试订单导入API...
+❌ 测试失败: Error: ENOENT: no such file or directory, open './server/resource/订单导出8.16-8.17.xlsx'
+    at Object.openSync (node:fs:562:18)
+    at Object.readFileSync (node:fs:446:35)
+    at testImportAPI (/Users/jingwang.wu/Documents/project/syntaxdropshipping/test-import-api.js:11:27)
+    at Object.<anonymous> (/Users/jingwang.wu/Documents/project/syntaxdropshipping/test-import-api.js:43:1)
+    at Module._compile (node:internal/modules/cjs/loader:1730:14)
+    at Object..js (node:internal/modules/cjs/loader:1895:10)
+    at Module.load (node:internal/modules/cjs/loader:1465:32)
+    at Function._load (node:internal/modules/cjs/loader:1282:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:235:24) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: './server/resource/订单导出8.16-8.17.xlsx'
+}
