@@ -177,6 +177,9 @@ class OrderExcelParser {
     // 设置默认值
     this.setDefaultValues(orderData);
 
+    // 检查结算条件并设置状态
+    this.checkAndSetSettlementStatus(orderData);
+
     return orderData;
   }
 
@@ -323,8 +326,59 @@ class OrderExcelParser {
       orderData.settlement_amount = 0;
     }
 
-    // 设置默认结算状态
+    // 设置默认结算状态（将在checkAndSetSettlementStatus中重新设置）
     orderData.settlement_status = 'waiting';
+  }
+
+  /**
+   * 检查结算条件并设置状态
+   * @param {object} orderData - 订单数据
+   */
+  checkAndSetSettlementStatus(orderData) {
+    let settlement_status = 'waiting';
+    let settle_remark = null;
+    
+    // 条件1：订单状态为已退款
+    if (orderData.order_status === '已退款') {
+      settlement_status = 'cancel';
+      settle_remark = '订单状态为已退款，无需结算';
+    }
+    // 条件2：备注中包含"不结算"
+    else if (this.checkRemarkContainsNoSettlement(orderData.remark)) {
+      settlement_status = 'cancel';
+      settle_remark = '备注中标记不结算，无需结算';
+    }
+    // 条件3：SKU为Upsell
+    else if (orderData.product_sku === 'Upsell') {
+      settlement_status = 'cancel';
+      settle_remark = 'SKU为Upsell产品，无需结算';
+    }
+    
+    orderData.settlement_status = settlement_status;
+    orderData.settle_remark = settle_remark;
+  }
+
+  /**
+   * 检查备注是否包含"不结算"
+   * @param {any} remark - 备注数据
+   * @returns {boolean} 是否包含不结算标记
+   */
+  checkRemarkContainsNoSettlement(remark) {
+    if (!remark) return false;
+    
+    // 如果remark是对象，检查三个备注字段
+    if (typeof remark === 'object') {
+      const allRemarks = [
+        remark.customer_remark,   // 客服备注
+        remark.picking_remark,    // 拣货备注
+        remark.order_remark       // 订单备注
+      ].filter(Boolean).join(' ');
+      
+      return allRemarks.includes('不结算');
+    }
+    
+    // 如果是字符串，直接检查
+    return String(remark).includes('不结算');
   }
 
   /**
@@ -343,43 +397,57 @@ class OrderExcelParser {
       'product_count',
       'buyer_name',
       'payment_time',
-      'order_status'
+      'order_status',
+      'product_sku'  // 添加SKU为必需字段
     ];
+
+    // SKU必需字段（用于区分正常订单和异常订单）
+    const skuRequiredFields = ['product_sku'];
 
     orders.forEach((order, index) => {
       const errors = [];
 
       // 检查是否为已退款订单
       const isRefundedOrder = order.order_status === '已退款';
-
-      // 验证必需字段（已退款订单放宽验证）
-      if (!isRefundedOrder) {
-        // 非退款订单需要验证所有必需字段
-        requiredFields.forEach(field => {
-          if (!order[field] || order[field] === null || order[field] === '') {
-            const fieldNames = {
-              'dxm_order_id': '订单号',
-              'country_code': '国家代码',
-              'product_count': '产品数量',
-              'buyer_name': '买家姓名',
-              'payment_time': '付款时间',
-              'order_status': '订单状态'
-            };
-            errors.push(`${fieldNames[field] || field}不能为空`);
-          }
-        });
+      
+      // 检查SKU是否为空（作为异常订单的判断条件）
+      const hasEmptySku = !order.product_sku || order.product_sku === null || order.product_sku.toString().trim() === '';
+      
+      // 如果SKU为空，直接标记为验证失败（不保存到任何表）
+      if (hasEmptySku) {
+        errors.push('商品SKU为空，订单将不会保存到任何表中，请先在店小秘中绑定商品后再重新导入，记住一定要重新导入，否则会丢失要结算的订单，后果自付');
       } else {
-        // 已退款订单只验证订单号和订单状态
-        const refundRequiredFields = ['dxm_order_id', 'order_status'];
-        refundRequiredFields.forEach(field => {
-          if (!order[field] || order[field] === null || order[field] === '') {
-            const fieldNames = {
-              'dxm_order_id': '订单号',
-              'order_status': '订单状态'
-            };
-            errors.push(`${fieldNames[field] || field}不能为空`);
-          }
-        });
+        // SKU不为空的订单进行正常验证
+        // 验证必需字段（已退款订单放宽验证）
+        if (!isRefundedOrder) {
+          // 非退款订单需要验证所有必需字段
+          requiredFields.forEach(field => {
+            if (!order[field] || order[field] === null || order[field] === '') {
+              const fieldNames = {
+                'dxm_order_id': '订单号',
+                'country_code': '国家代码',
+                'product_count': '产品数量',
+                'buyer_name': '买家姓名',
+                'payment_time': '付款时间',
+                'order_status': '订单状态',
+                'product_sku': '商品SKU'
+              };
+              errors.push(`${fieldNames[field] || field}不能为空`);
+            }
+          });
+        } else {
+          // 已退款订单只验证订单号和订单状态
+          const refundRequiredFields = ['dxm_order_id', 'order_status'];
+          refundRequiredFields.forEach(field => {
+            if (!order[field] || order[field] === null || order[field] === '') {
+              const fieldNames = {
+                'dxm_order_id': '订单号',
+                'order_status': '订单状态'
+              };
+              errors.push(`${fieldNames[field] || field}不能为空`);
+            }
+          });
+        }
       }
 
       // 验证订单号格式

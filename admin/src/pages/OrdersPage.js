@@ -302,15 +302,53 @@ const OrdersPage = () => {
         setTimeout(() => {
           setProgressModal(prev => ({ ...prev, isOpen: false }));
           
-          const successMsg = `Excel导入成功！
-正常订单: ${response.data.insertResult.success}条
-异常订单: ${response.data.insertResult.abnormal || 0}条  
-失败: ${response.data.insertResult.failed}条
+          // 构建成功消息
+          let successMsg = `Excel导入成功！
 
-详细统计:
+📊 数据处理统计:
 - 解析成功: ${response.data.parseResult.parsed}条
 - 验证通过: ${response.data.validationResult.validCount}条
-- 验证失败: ${response.data.validationResult.invalidCount}条`;
+- 验证失败: ${response.data.validationResult.invalidCount}条
+
+💾 数据库操作:
+- 正常订单: ${response.data.insertResult.success}条
+- 异常订单: ${response.data.insertResult.abnormal || 0}条
+- SKU为空: ${response.data.emptySkuResult?.count || 0}条（未保存）
+- 处理失败: ${response.data.insertResult.failed}条`;
+
+          // 添加结算统计信息
+          if (response.data.settlementResult) {
+            const settlement = response.data.settlementResult;
+            successMsg += `
+
+⚖️ 结算统计:
+- 总处理: ${settlement.totalProcessed}条
+- 等待结算: ${settlement.waitingCount}条
+- 取消结算: ${settlement.cancelCount}条`;
+
+            // 添加取消原因详情
+            if (settlement.cancelCount > 0 && settlement.cancelBreakdown) {
+              const reasons = [];
+              Object.entries(settlement.cancelBreakdown).forEach(([reason, count]) => {
+                if (count > 0) {
+                  reasons.push(`  · ${reason}: ${count}条`);
+                }
+              });
+              if (reasons.length > 0) {
+                successMsg += `\n\n📋 取消原因:\n${reasons.join('\n')}`;
+              }
+            }
+          }
+
+          // 添加SKU为空订单警告
+          if (response.data.emptySkuResult && response.data.emptySkuResult.count > 0) {
+            successMsg += `
+
+🚨 重要警告:
+- SKU为空: ${response.data.emptySkuResult.count}条订单未保存
+- 请立即到店小秘中绑定商品SKU后重新导入
+- 否则这些订单将永久丢失，无法结算！`;
+          }
 
           alert(successMsg);
           
@@ -490,7 +528,7 @@ const OrdersPage = () => {
         {importResult.insertResult && (
           <div className="mb-6">
             <h4 className="text-md font-medium text-gray-700 mb-3">💾 数据库操作</h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="bg-green-50 p-4 rounded-lg text-center">
                 <div className="text-2xl font-bold text-green-600">
                   {importResult.insertResult.success}
@@ -507,12 +545,104 @@ const OrdersPage = () => {
               </div>
               <div className="bg-red-50 p-4 rounded-lg text-center">
                 <div className="text-2xl font-bold text-red-600">
+                  {importResult.emptySkuResult?.count || 0}
+                </div>
+                <div className="text-sm text-gray-600">SKU为空</div>
+                <div className="text-xs text-gray-500">未存储到任何表</div>
+              </div>
+              <div className="bg-gray-50 p-4 rounded-lg text-center">
+                <div className="text-2xl font-bold text-gray-600">
                   {importResult.insertResult.failed}
                 </div>
                 <div className="text-sm text-gray-600">处理失败</div>
-                <div className="text-xs text-gray-500">未能存储</div>
+                <div className="text-xs text-gray-500">系统错误</div>
               </div>
             </div>
+            
+            {/* SKU为空订单详细警告 */}
+            {importResult.emptySkuResult && importResult.emptySkuResult.count > 0 && (
+              <div className="mt-4 bg-red-100 border-2 border-red-400 rounded-lg p-4">
+                <div className="flex items-center mb-2">
+                  <svg className="w-5 h-5 text-red-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  <h5 className="text-red-800 font-bold text-lg">🚨 重要警告：{importResult.emptySkuResult.count}条订单未保存</h5>
+                </div>
+                <p className="text-red-700 font-medium mb-3">
+                  <span className="text-red-900 font-bold">这些订单的商品SKU为空，已被跳过，不会保存到任何表中！</span>
+                </p>
+                <p className="text-red-700 font-medium mb-3">
+                  请立即到店小秘中为这些订单绑定商品SKU，然后<span className="text-red-900 font-bold underline">重新导入</span>，
+                  否则这些订单将<span className="text-red-900 font-bold">永久丢失，无法结算！</span>
+                </p>
+                
+                {/* 显示部分未保存的订单 */}
+                {importResult.emptySkuResult.orders && importResult.emptySkuResult.orders.length > 0 && (
+                  <div className="mt-3">
+                    <h6 className="text-red-800 font-medium mb-2">未保存的订单示例（前5条）：</h6>
+                    <div className="bg-red-50 border border-red-300 rounded p-3 max-h-40 overflow-y-auto">
+                      {importResult.emptySkuResult.orders.slice(0, 5).map((order, index) => (
+                        <div key={index} className="text-sm text-red-700 mb-1">
+                          • 订单号: <span className="font-mono">{order.dxm_order_id}</span> - {order.buyer_name} - {order.product_name?.substring(0, 30)}...
+                        </div>
+                      ))}
+                      {importResult.emptySkuResult.orders.length > 5 && (
+                        <div className="text-sm text-red-600 font-medium mt-2">
+                          还有 {importResult.emptySkuResult.orders.length - 5} 条订单未显示...
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 结算统计 */}
+        {importResult.settlementResult && (
+          <div className="mb-6">
+            <h4 className="text-md font-medium text-gray-700 mb-3">⚖️ 结算统计</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div className="bg-blue-50 p-4 rounded-lg text-center">
+                <div className="text-2xl font-bold text-blue-600">
+                  {importResult.settlementResult.totalProcessed || 0}
+                </div>
+                <div className="text-sm text-gray-600">总处理订单</div>
+                <div className="text-xs text-gray-500">已分析结算条件</div>
+              </div>
+              <div className="bg-green-50 p-4 rounded-lg text-center">
+                <div className="text-2xl font-bold text-green-600">
+                  {importResult.settlementResult.waitingCount || 0}
+                </div>
+                <div className="text-sm text-gray-600">等待结算</div>
+                <div className="text-xs text-gray-500">正常订单</div>
+              </div>
+              <div className="bg-red-50 p-4 rounded-lg text-center">
+                <div className="text-2xl font-bold text-red-600">
+                  {importResult.settlementResult.cancelCount || 0}
+                </div>
+                <div className="text-sm text-gray-600">取消结算</div>
+                <div className="text-xs text-gray-500">符合不结算条件</div>
+              </div>
+            </div>
+            
+            {/* 取消原因详情 */}
+            {importResult.settlementResult.cancelCount > 0 && importResult.settlementResult.cancelBreakdown && (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <h5 className="text-sm font-medium text-gray-700 mb-3">📋 取消结算原因分布</h5>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {Object.entries(importResult.settlementResult.cancelBreakdown).map(([reason, count]) => (
+                    count > 0 && (
+                      <div key={reason} className="flex justify-between items-center bg-white px-3 py-2 rounded border">
+                        <span className="text-sm text-gray-600">{reason}</span>
+                        <span className="text-sm font-medium text-gray-900">{count}条</span>
+                      </div>
+                    )
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -704,7 +834,7 @@ const OrdersPage = () => {
               <div>
                 <h5 className="font-medium text-blue-800">🔴 必需字段验证（普通订单）</h5>
                 <p className="text-blue-600 ml-4">
-                  以下字段不能为空：订单号、国家代码、产品数量、买家姓名、付款时间、订单状态
+                  以下字段不能为空：订单号、国家代码、产品数量、买家姓名、付款时间、订单状态、<strong>商品SKU</strong>
                 </p>
               </div>
               
@@ -720,7 +850,51 @@ const OrdersPage = () => {
                 <ul className="text-blue-600 ml-4 space-y-1">
                   <li>• 订单号：必须是"数字-数字"格式（如：7268217-3290）</li>
                   <li>• 付款时间：必须是有效的日期格式</li>
+                  <li>• 商品SKU：不能为空</li>
                 </ul>
+              </div>
+              
+              <div className="bg-red-100 border border-red-400 rounded p-3">
+                <h5 className="font-medium text-red-800">⚠️ SKU为空订单处理</h5>
+                <p className="text-red-700 ml-4 font-medium">
+                  <span className="text-red-900 font-bold">重要警告：</span>
+                  商品SKU为空的订单将<span className="text-red-900 font-bold">不会保存到任何表中</span>，
+                  请先在店小秘中绑定商品后再重新导入，
+                  <span className="text-red-900 font-bold">记住一定要重新导入，否则会丢失要结算的订单，后果自付</span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* 结算规则说明 */}
+          <div className="mt-4 bg-orange-50 border border-orange-200 rounded-lg p-4">
+            <h4 className="text-sm font-semibold text-orange-800 mb-3">⚖️ 自动结算规则说明</h4>
+            
+            <div className="space-y-3 text-sm text-orange-700">
+              <div>
+                <h5 className="font-medium text-orange-800">🚫 取消结算条件（自动识别）</h5>
+                <p className="text-orange-600 ml-4 mb-2">
+                  系统会自动识别以下订单并设置为"取消结算"状态：
+                </p>
+                <ul className="text-orange-600 ml-8 space-y-1">
+                  <li>• <strong>订单状态为"已退款"</strong> - 退款订单无需结算</li>
+                  <li>• <strong>备注中包含"不结算"</strong> - 检查客服备注、拣货备注、订单备注三个字段</li>
+                  <li>• <strong>SKU为"Upsell"</strong> - Upsell产品无需结算</li>
+                </ul>
+              </div>
+              
+              <div>
+                <h5 className="font-medium text-orange-800">✅ 等待结算订单</h5>
+                <p className="text-orange-600 ml-4">
+                  不符合以上取消条件的订单将自动设置为"等待结算"状态
+                </p>
+              </div>
+              
+              <div>
+                <h5 className="font-medium text-orange-800">🔒 状态保护机制</h5>
+                <p className="text-orange-600 ml-4">
+                  已设置为"取消结算"的订单，在后续导入更新时不会被覆盖
+                </p>
               </div>
             </div>
           </div>

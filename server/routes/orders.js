@@ -102,6 +102,20 @@ router.post('/import', authenticateAdmin, upload.single('file'), async (req, res
     // 批量插入订单数据（包括异常订单）
     const insertResult = await orderShardingManager.batchInsertOrders(allOrdersForProcessing);
     console.log(`💾 数据处理结果: 正常${insertResult.success}条, 异常${insertResult.abnormal}条, 失败${insertResult.failed}条`);
+    
+    // 输出结算统计信息
+    if (insertResult.settlementStats) {
+      const stats = insertResult.settlementStats;
+      console.log(`⚖️ 结算统计: 总计${stats.totalProcessed}条, 取消结算${stats.cancelCount}条, 等待结算${stats.waitingCount}条`);
+      if (stats.cancelCount > 0) {
+        console.log(`📋 取消原因分布: 已退款${stats.cancelReasons['已退款']}条, 备注不结算${stats.cancelReasons['备注不结算']}条, Upsell产品${stats.cancelReasons['Upsell产品']}条`);
+      }
+    }
+    
+    // 输出SKU为空订单统计
+    if (insertResult.emptySkuStats && insertResult.emptySkuStats.count > 0) {
+      console.log(`🚨 SKU为空订单: ${insertResult.emptySkuStats.count}条订单未保存，请绑定商品后重新导入`);
+    }
 
     res.json({
       success: true,
@@ -122,6 +136,18 @@ router.post('/import', authenticateAdmin, upload.single('file'), async (req, res
           failed: insertResult.failed,
           abnormal: insertResult.abnormal || 0,
           errors: insertResult.errors.slice(0, 10) // 只返回前10个错误
+        },
+        // 新增结算统计
+        settlementResult: {
+          totalProcessed: insertResult.settlementStats?.totalProcessed || 0,
+          cancelCount: insertResult.settlementStats?.cancelCount || 0,
+          waitingCount: insertResult.settlementStats?.waitingCount || 0,
+          cancelBreakdown: insertResult.settlementStats?.cancelReasons || {}
+        },
+        // 新增SKU为空订单统计
+        emptySkuResult: {
+          count: insertResult.emptySkuStats?.count || 0,
+          orders: insertResult.emptySkuStats?.orders || []
         }
       }
     });

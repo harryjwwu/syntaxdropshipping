@@ -161,7 +161,7 @@ class OrderShardingManager {
         remark: orderData.remark ? this.safeJsonStringify(orderData.remark) : null,
         order_status: orderData.order_status || null,
         settlement_status: orderData.settlement_status || 'waiting',
-        settle_remark: orderData.settle_remark || null
+        settle_remark: orderData.settle_remark
       };
 
       // 构建SQL
@@ -198,7 +198,23 @@ class OrderShardingManager {
       success: 0,
       failed: 0,
       abnormal: 0,
-      errors: []
+      errors: [],
+      // 新增结算统计
+      settlementStats: {
+        totalProcessed: 0,
+        cancelCount: 0,
+        waitingCount: 0,
+        cancelReasons: {
+          '已退款': 0,
+          '备注不结算': 0,
+          'Upsell产品': 0
+        }
+      },
+      // 新增SKU为空订单统计
+      emptySkuStats: {
+        count: 0,
+        orders: []
+      }
     };
 
     const totalOrders = ordersData.length;
@@ -222,7 +238,24 @@ class OrderShardingManager {
       
       // 检查是否为验证失败的订单
       if (orderData._validationFailed) {
-        // 验证失败的订单直接放入异常订单列表
+        // 检查是否为SKU为空的订单
+        const isEmptySkuOrder = orderData._validationErrors.some(error => 
+          error.includes('商品SKU为空')
+        );
+        
+        if (isEmptySkuOrder) {
+          // SKU为空的订单不保存到任何表，只统计
+          results.emptySkuStats.count++;
+          results.emptySkuStats.orders.push({
+            index: i,
+            dxm_order_id: orderData.dxm_order_id,
+            product_name: orderData.product_name,
+            buyer_name: orderData.buyer_name
+          });
+          continue; // 跳过，不保存到任何表
+        }
+        
+        // 其他验证失败的订单放入异常订单列表
         abnormalOrders.push({ 
           index: i, 
           data: orderData, 
@@ -240,6 +273,9 @@ class OrderShardingManager {
         }
         
         tableGroups[tableName].push({ index: i, data: orderData, dxmClientId });
+        
+        // 统计结算状态
+        this.updateSettlementStats(results.settlementStats, orderData);
       } catch (error) {
         // 无法解析客户ID的订单放入异常订单列表
         abnormalOrders.push({ 
@@ -396,7 +432,7 @@ class OrderShardingManager {
         orderData.remark ? this.safeJsonStringify(orderData.remark) : null,
         orderData.order_status || null,
         orderData.settlement_status || 'waiting',
-        orderData.settle_remark || null,
+        orderData.settle_remark,
         abnormalOrder.error // 存储解析错误信息
       );
 
@@ -552,6 +588,15 @@ class OrderShardingManager {
         waybill_number = VALUES(waybill_number),
         product_sku = VALUES(product_sku),
         remark = VALUES(remark),
+        -- 保护cancel状态不被覆盖
+        settlement_status = CASE 
+          WHEN settlement_status = 'cancel' THEN settlement_status 
+          ELSE VALUES(settlement_status) 
+        END,
+        settle_remark = CASE 
+          WHEN settlement_status = 'cancel' AND settle_remark IS NOT NULL THEN settle_remark 
+          ELSE VALUES(settle_remark) 
+        END,
         updated_at = CURRENT_TIMESTAMP
     `;
 
@@ -755,6 +800,30 @@ class OrderShardingManager {
 
     const [rows] = await connection.execute(sql, [dxmClientId]);
     return rows;
+  }
+
+  /**
+   * 更新结算统计信息
+   * @param {object} settlementStats - 统计对象
+   * @param {object} orderData - 订单数据
+   */
+  updateSettlementStats(settlementStats, orderData) {
+    settlementStats.totalProcessed++;
+    
+    if (orderData.settlement_status === 'cancel') {
+      settlementStats.cancelCount++;
+      
+      // 统计取消原因
+      if (orderData.settle_remark?.includes('已退款')) {
+        settlementStats.cancelReasons['已退款']++;
+      } else if (orderData.settle_remark?.includes('备注')) {
+        settlementStats.cancelReasons['备注不结算']++;
+      } else if (orderData.settle_remark?.includes('Upsell')) {
+        settlementStats.cancelReasons['Upsell产品']++;
+      }
+    } else {
+      settlementStats.waitingCount++;
+    }
   }
 }
 
