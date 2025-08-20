@@ -989,6 +989,7 @@ const OrdersPage = () => {
             >
               <option value="">全部结算状态</option>
               <option value="waiting">待结算</option>
+              <option value="calculated">已计算结算数据</option>
               <option value="settled">已结算</option>
               <option value="cancel">已取消</option>
             </select>
@@ -1218,11 +1219,13 @@ const OrdersPage = () => {
                       </div>
                       <div className="text-xs">
                         <span className={`inline-flex px-2 py-1 rounded-full text-xs ${
+                          order.settlement_status === 'calculated' ? 'bg-blue-100 text-blue-700' :
                           order.settlement_status === 'settled' ? 'bg-green-100 text-green-700' :
                           order.settlement_status === 'cancel' ? 'bg-red-100 text-red-700' :
                           'bg-yellow-100 text-yellow-700'
                         }`}>
                           {order.settlement_status === 'waiting' ? '待结算' : 
+                           order.settlement_status === 'calculated' ? '已计算结算数据' :
                            order.settlement_status === 'settled' ? '已结算' : '已取消'}
                         </span>
                       </div>
