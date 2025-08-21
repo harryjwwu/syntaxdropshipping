@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const adminAuth = require('../middleware/adminAuth');
+const { authenticateAdmin } = require('../middleware/adminAuth');
+const { getConnection } = require('../config/database');
 const SettlementManager = require('../utils/settlementManager');
 
 const settlementManager = new SettlementManager();
@@ -10,7 +11,7 @@ const settlementManager = new SettlementManager();
  * POST /api/settlement/settle
  * Body: { settlementDate: "YYYY-MM-DD" }
  */
-router.post('/settle', adminAuth, async (req, res) => {
+router.post('/settle', authenticateAdmin, async (req, res) => {
   try {
     const { settlementDate } = req.body;
 
@@ -30,7 +31,7 @@ router.post('/settle', adminAuth, async (req, res) => {
       });
     }
 
-    console.log(`管理员 ${req.user.email} 开始结算 ${settlementDate} 的订单`);
+    console.log(`管理员 ${req.admin.email} 开始结算 ${settlementDate} 的订单`);
 
     const startTime = Date.now();
     const stats = await settlementManager.settleOrdersByDate(settlementDate);
@@ -61,7 +62,7 @@ router.post('/settle', adminAuth, async (req, res) => {
  * POST /api/settlement/re-settle
  * Body: { orderIds: [1,2,3], settlementDate: "YYYY-MM-DD" }
  */
-router.post('/re-settle', adminAuth, async (req, res) => {
+router.post('/re-settle', authenticateAdmin, async (req, res) => {
   try {
     const { orderIds, settlementDate } = req.body;
 
@@ -79,7 +80,7 @@ router.post('/re-settle', adminAuth, async (req, res) => {
       });
     }
 
-    console.log(`管理员 ${req.user.email} 重新结算订单:`, orderIds);
+    console.log(`管理员 ${req.admin.email} 重新结算订单:`, orderIds);
 
     const startTime = Date.now();
     const stats = await settlementManager.reSettleOrders(orderIds, settlementDate);
@@ -109,7 +110,7 @@ router.post('/re-settle', adminAuth, async (req, res) => {
  * 获取结算统计信息
  * GET /api/settlement/stats/:date
  */
-router.get('/stats/:date', adminAuth, async (req, res) => {
+router.get('/stats/:date', authenticateAdmin, async (req, res) => {
   try {
     const { date } = req.params;
 
@@ -146,7 +147,7 @@ router.get('/stats/:date', adminAuth, async (req, res) => {
  * POST /api/settlement/batch-settle
  * Body: { startDate: "YYYY-MM-DD", endDate: "YYYY-MM-DD" }
  */
-router.post('/batch-settle', adminAuth, async (req, res) => {
+router.post('/batch-settle', authenticateAdmin, async (req, res) => {
   try {
     const { startDate, endDate } = req.body;
 
@@ -182,7 +183,7 @@ router.post('/batch-settle', adminAuth, async (req, res) => {
       });
     }
 
-    console.log(`管理员 ${req.user.email} 开始批量结算 ${startDate} 到 ${endDate}`);
+    console.log(`管理员 ${req.admin.email} 开始批量结算 ${startDate} 到 ${endDate}`);
 
     const batchResults = [];
     let totalProcessed = 0;
@@ -233,7 +234,7 @@ router.post('/batch-settle', adminAuth, async (req, res) => {
  * 获取结算日志
  * GET /api/settlement/logs
  */
-router.get('/logs', adminAuth, async (req, res) => {
+router.get('/logs', authenticateAdmin, async (req, res) => {
   try {
     const { page = 1, limit = 50, date, status } = req.query;
     
@@ -266,7 +267,7 @@ router.get('/logs', adminAuth, async (req, res) => {
  * POST /api/settlement/cancel
  * Body: { orderIds: [1,2,3], reason: "取消原因" }
  */
-router.post('/cancel', adminAuth, async (req, res) => {
+router.post('/cancel', authenticateAdmin, async (req, res) => {
   try {
     const { orderIds, reason } = req.body;
 
@@ -279,8 +280,8 @@ router.post('/cancel', adminAuth, async (req, res) => {
 
     // 这里实现取消结算的逻辑
     // 将订单状态设置为 'cancel'
-    const { getConnection } = require('../config/database');
-    const connection = await getConnection();
+    const pool = await getConnection();
+    const connection = await pool.getConnection();
 
     const tables = settlementManager.getAllOrderTableNames();
     let cancelledCount = 0;
@@ -298,7 +299,7 @@ router.post('/cancel', adminAuth, async (req, res) => {
       cancelledCount += result.affectedRows;
     }
 
-    console.log(`管理员 ${req.user.email} 取消了 ${cancelledCount} 个订单的结算`);
+    console.log(`管理员 ${req.admin.email} 取消了 ${cancelledCount} 个订单的结算`);
 
     res.json({
       success: true,
@@ -316,6 +317,10 @@ router.post('/cancel', adminAuth, async (req, res) => {
       success: false,
       message: '取消结算失败: ' + error.message
     });
+  } finally {
+    if (connection) {
+      connection.release();
+    }
   }
 });
 
