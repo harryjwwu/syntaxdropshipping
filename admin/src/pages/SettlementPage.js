@@ -8,7 +8,8 @@ import {
   CheckCircle,
   Clock,
   FileText,
-  RefreshCw
+  RefreshCw,
+  X
 } from 'lucide-react';
 import { adminAPI } from '../utils/api';
 
@@ -26,6 +27,9 @@ const SettlementPage = () => {
   const [calculateResult, setCalculateResult] = useState(null);
   const [ordersList, setOrdersList] = useState(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [settlementRecords, setSettlementRecords] = useState([]);
+  const [selectedRecord, setSelectedRecord] = useState(null);
+  const [recordOrders, setRecordOrders] = useState([]);
 
   // 获取昨天的日期作为最大可选日期
   const getMaxDate = () => {
@@ -95,9 +99,36 @@ const SettlementPage = () => {
       setShowConfirmModal(false);
       // 重新获取订单列表
       await handleGetSettlementOrders({ preventDefault: () => {} });
+      // 刷新结算记录列表
+      await fetchSettlementRecords();
     } catch (error) {
       console.error('执行结算失败:', error);
       alert(error.response?.data?.message || '执行结算失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 获取结算记录列表
+  const fetchSettlementRecords = async () => {
+    try {
+      const response = await adminAPI.getSettlementRecords();
+      setSettlementRecords(response.data || []);
+    } catch (error) {
+      console.error('获取结算记录失败:', error);
+    }
+  };
+
+  // 获取结算记录详情
+  const handleViewSettlementDetail = async (record) => {
+    setLoading(true);
+    try {
+      const response = await adminAPI.getSettlementRecordDetail(record.id);
+      setSelectedRecord(record);
+      setRecordOrders(response.data.orders || []);
+    } catch (error) {
+      console.error('获取结算详情失败:', error);
+      alert(error.response?.data?.message || '获取结算详情失败');
     } finally {
       setLoading(false);
     }
@@ -137,7 +168,21 @@ const SettlementPage = () => {
               }`}
             >
               <DollarSign className="w-4 h-4 inline mr-2" />
-              结算管理
+              开始结算
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('records');
+                fetchSettlementRecords();
+              }}
+              className={`py-4 px-6 text-sm font-medium border-b-2 ${
+                activeTab === 'records'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <FileText className="w-4 h-4 inline mr-2" />
+              结算列表
             </button>
           </nav>
         </div>
@@ -251,14 +296,14 @@ const SettlementPage = () => {
             </div>
           )}
 
-          {/* 结算管理 */}
+          {/* 开始结算 */}
           {activeTab === 'manage' && (
             <div className="space-y-6">
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                 <div className="flex items-start">
                   <DollarSign className="w-5 h-5 text-yellow-600 mt-0.5 mr-3" />
                   <div>
-                    <h3 className="text-sm font-medium text-yellow-800">结算管理</h3>
+                    <h3 className="text-sm font-medium text-yellow-800">开始结算</h3>
                     <p className="text-sm text-yellow-700 mt-1">
                       查看指定客户的结算订单，确认无异常后可执行结算收款。
                     </p>
@@ -450,8 +495,203 @@ const SettlementPage = () => {
               )}
             </div>
           )}
+
+          {/* 结算列表 */}
+          {activeTab === 'records' && (
+            <div className="space-y-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start">
+                  <FileText className="w-5 h-5 text-blue-600 mt-0.5 mr-3" />
+                  <div>
+                    <h3 className="text-sm font-medium text-blue-800">结算列表</h3>
+                    <p className="text-sm text-blue-700 mt-1">
+                      查看已完成的结算记录，点击记录可查看详细的订单列表。
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 结算记录列表 */}
+              {settlementRecords.length > 0 ? (
+                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+                    <h3 className="text-lg font-medium text-gray-900">结算记录</h3>
+                  </div>
+                  
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            结算记录ID
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            客户信息
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            结算信息
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            状态
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            操作
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {settlementRecords.map((record) => (
+                          <tr key={record.id} className="hover:bg-gray-50">
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              <div className="text-sm">
+                                <div className="font-medium text-gray-900">{record.id}</div>
+                                <div className="text-gray-500">{new Date(record.created_at).toLocaleString()}</div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              <div className="text-sm">
+                                <div className="font-medium text-gray-900">客户ID: {record.dxm_client_id}</div>
+                                <div className="text-gray-500">结算日期: {record.settlement_date}</div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              <div className="text-sm">
+                                <div className="font-medium text-gray-900">
+                                  ¥{parseFloat(record.total_settlement_amount || 0).toFixed(2)}
+                                </div>
+                                <div className="text-gray-500">{record.order_count} 个订单</div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                record.status === 'completed' 
+                                  ? 'bg-green-100 text-green-800'
+                                  : record.status === 'pending'
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : 'bg-gray-100 text-gray-800'
+                              }`}>
+                                {record.status === 'completed' && '已完成'}
+                                {record.status === 'pending' && '处理中'}
+                                {record.status === 'cancelled' && '已取消'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              <button
+                                onClick={() => handleViewSettlementDetail(record)}
+                                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                              >
+                                查看详情
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
+                  <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500">暂无结算记录</p>
+                  <p className="text-gray-400 text-sm mt-1">完成结算后记录将显示在这里</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
+
+      {/* 结算记录详情模态框 */}
+      {selectedRecord && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4 text-center">
+            <div className="fixed inset-0 bg-black bg-opacity-25" onClick={() => setSelectedRecord(null)} />
+            
+            <div className="relative bg-white rounded-lg shadow-xl max-w-6xl w-full p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900">结算记录详情</h3>
+                  <p className="text-sm text-gray-600">结算ID: {selectedRecord.id}</p>
+                </div>
+                <button
+                  onClick={() => setSelectedRecord(null)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              {/* 结算记录信息 */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600">客户ID:</span>
+                    <span className="font-medium ml-2">{selectedRecord.dxm_client_id}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">结算日期:</span>
+                    <span className="font-medium ml-2">{selectedRecord.settlement_date}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">订单数量:</span>
+                    <span className="font-medium ml-2">{selectedRecord.order_count}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">结算金额:</span>
+                    <span className="font-medium ml-2 text-green-600">¥{parseFloat(selectedRecord.total_settlement_amount || 0).toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 订单列表 */}
+              {recordOrders.length > 0 && (
+                <div className="max-h-96 overflow-y-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50 sticky top-0">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          订单信息
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          商品信息
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          结算金额
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {recordOrders.map((order, index) => (
+                        <tr key={`${order._tableName}-${order.id}`} className="hover:bg-gray-50">
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            <div className="text-sm">
+                              <div className="font-medium text-gray-900">#{order.dxm_order_id}</div>
+                              <div className="text-gray-500">{order.buyer_name}</div>
+                              <div className="text-gray-500">{new Date(order.payment_time).toLocaleString()}</div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="text-sm">
+                              <div className="font-medium text-gray-900">{order.product_name}</div>
+                              <div className="text-gray-500">SKU: {order.product_sku}</div>
+                              <div className="text-gray-500">数量: {order.product_count}</div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">
+                              ¥{parseFloat(order.settlement_amount || 0).toFixed(2)}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 确认结算模态框 */}
       {showConfirmModal && ordersList && (

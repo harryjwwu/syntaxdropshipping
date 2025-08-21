@@ -519,6 +519,137 @@ router.get('/logs', authenticateAdmin, async (req, res) => {
 });
 
 /**
+ * 获取结算记录列表
+ * GET /api/settlement/records
+ * Query: { page?: number, limit?: number, dxm_client_id?: number }
+ */
+router.get('/records', authenticateAdmin, async (req, res) => {
+  try {
+    const { page = 1, limit = 20, dxm_client_id } = req.query;
+    const offset = (page - 1) * limit;
+
+    const pool = await getConnection();
+    
+    let query = `
+      SELECT id, dxm_client_id, settlement_date, total_settlement_amount, 
+             order_count, status, created_by, notes, created_at, updated_at
+      FROM settlement_records
+    `;
+    
+    let countQuery = 'SELECT COUNT(*) as total FROM settlement_records';
+    let params = [];
+    let countParams = [];
+    
+    if (dxm_client_id) {
+      query += ' WHERE dxm_client_id = ?';
+      countQuery += ' WHERE dxm_client_id = ?';
+      params.push(dxm_client_id);
+      countParams.push(dxm_client_id);
+    }
+    
+    query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), parseInt(offset));
+    
+    const [records] = await pool.execute(query, params);
+    const [countResult] = await pool.execute(countQuery, countParams);
+    
+    const total = countResult[0].total;
+    const totalPages = Math.ceil(total / limit);
+
+    res.json({
+      success: true,
+      data: records,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        totalPages,
+        hasMore: page < totalPages
+      }
+    });
+
+  } catch (error) {
+    console.error('获取结算记录失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '获取结算记录失败: ' + error.message
+    });
+  }
+});
+
+/**
+ * 获取结算记录详情和相关订单
+ * GET /api/settlement/records/:id
+ */
+router.get('/records/:id', authenticateAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const pool = await getConnection();
+    
+    // 获取结算记录详情
+    const [records] = await pool.execute(`
+      SELECT id, dxm_client_id, settlement_date, total_settlement_amount, 
+             order_count, status, created_by, notes, created_at, updated_at
+      FROM settlement_records
+      WHERE id = ?
+    `, [id]);
+
+    if (records.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: '结算记录不存在'
+      });
+    }
+
+    const record = records[0];
+    
+    // 获取相关订单列表
+    const allOrders = [];
+    const tables = settlementManager.getAllOrderTableNames();
+    
+    for (const tableName of tables) {
+      try {
+        const [orders] = await pool.execute(`
+          SELECT id, dxm_order_id, dxm_client_id, order_id, country_code, 
+                 product_count, buyer_name, product_name, payment_time,
+                 product_sku, product_spu, unit_price, multi_total_price,
+                 discount, settlement_amount, settlement_status, settlement_record_id
+          FROM ${tableName}
+          WHERE settlement_record_id = ?
+          ORDER BY payment_time
+        `, [id]);
+
+        const ordersWithTable = orders.map(order => ({
+          ...order,
+          _tableName: tableName
+        }));
+
+        allOrders.push(...ordersWithTable);
+      } catch (error) {
+        console.warn(`查询表 ${tableName} 时出错:`, error.message);
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        record,
+        orders: allOrders,
+        orderCount: allOrders.length
+      }
+    });
+
+  } catch (error) {
+    console.error('获取结算记录详情失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '获取结算记录详情失败: ' + error.message
+    });
+  }
+});
+
+/**
  * 取消订单结算
  * POST /api/settlement/cancel
  * Body: { orderIds: [1,2,3], reason: "取消原因" }

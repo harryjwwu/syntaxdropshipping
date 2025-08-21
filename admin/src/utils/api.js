@@ -306,7 +306,13 @@ export const adminAPI = {
   executeSettlement: (data) => api.post('/admin/settlement/execute', data),
   
   // 获取结算统计
-  getSettlementStats: (date) => api.get(`/admin/settlement/stats/${date}`)
+  getSettlementStats: (date) => api.get(`/admin/settlement/stats/${date}`),
+  
+  // 获取结算记录列表
+  getSettlementRecords: (params = {}) => api.get('/admin/settlement/records', { params }),
+  
+  // 获取结算记录详情
+  getSettlementRecordDetail: (recordId) => api.get(`/admin/settlement/records/${recordId}`)
 };
 
 // 工具函数
