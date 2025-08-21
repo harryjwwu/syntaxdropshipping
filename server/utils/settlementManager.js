@@ -53,6 +53,7 @@ class SettlementManager {
       const stats = {
         processedOrders: 0,
         settledOrders: 0,
+        cancelledOrders: 0,
         errors: [],
         userDiscounts: 0,
         spuPrices: 0,
@@ -69,17 +70,30 @@ class SettlementManager {
         return stats;
       }
 
-      // 步骤0: SKU->SPU映射
-      await this.mapSkuToSpu(connection, allOrders, stats);
+      // 步骤0: 检查并处理需要取消结算的订单
+      await this.processCancelledOrders(connection, allOrders, stats);
 
-      // 步骤1-4: 用户级折扣计算
-      await this.calculateUserDiscounts(connection, allOrders, startTime, endTime, stats);
+      // 过滤掉已取消的订单，只处理正常订单
+      const normalOrders = allOrders.filter(order => order.settlement_status !== 'cancel');
+      console.log(`🔍 过滤后待处理订单: ${normalOrders.length} (原始: ${allOrders.length}, 已取消: ${allOrders.length - normalOrders.length})`);
+
+      if (normalOrders.length === 0) {
+        console.log('所有订单都已取消，无需进行结算计算');
+        await connection.commit();
+        return stats;
+      }
+
+      // 步骤1: SKU->SPU映射
+      await this.mapSkuToSpu(connection, normalOrders, stats);
+
+      // 步骤2-4: 用户级折扣计算
+      await this.calculateUserDiscounts(connection, normalOrders, startTime, endTime, stats);
 
       // 步骤5: 客户专属SPU价格查询和更新
-      await this.updateSpuPrices(connection, allOrders, stats);
+      await this.updateSpuPrices(connection, normalOrders, stats);
 
       // 步骤6: 最终结算金额计算
-      await this.calculateFinalSettlement(connection, allOrders, stats);
+      await this.calculateFinalSettlement(connection, normalOrders, stats);
 
       await connection.commit();
       console.log(`结算完成！处理订单: ${stats.processedOrders}, 成功结算: ${stats.settledOrders}`);
@@ -113,7 +127,8 @@ class SettlementManager {
           SELECT id, dxm_order_id, dxm_client_id, order_id, country_code, 
                  product_count, buyer_name, product_name, payment_time,
                  product_sku, product_spu, unit_price, multi_total_price,
-                 discount, settlement_amount, settlement_status
+                 discount, settlement_amount, settlement_status, order_status,
+                 customer_remark, picking_remark, order_remark, settle_remark
           FROM ${tableName}
           WHERE payment_time BETWEEN ? AND ?
             AND settlement_status = 'waiting'`;
@@ -142,6 +157,88 @@ class SettlementManager {
     }
 
     return allOrders;
+  }
+
+  /**
+   * 处理需要取消结算的订单
+   * @param {Object} connection - 数据库连接
+   * @param {Array} orders - 订单列表
+   * @param {Object} stats - 统计信息
+   */
+  async processCancelledOrders(connection, orders, stats) {
+    let cancelledCount = 0;
+    
+    for (const order of orders) {
+      let shouldCancel = false;
+      let cancelReason = '';
+      
+      // 条件1：订单状态为"已退款"
+      if (order.order_status === '已退款') {
+        shouldCancel = true;
+        cancelReason = '订单状态为已退款，无需结算';
+      }
+      // 条件2：备注中包含"不结算"
+      else if (this.checkRemarkContainsNoSettlement(order)) {
+        shouldCancel = true;
+        cancelReason = '备注中标记不结算，无需结算';
+      }
+      // 条件3：SKU为Upsell
+      else if (order.product_sku === 'Upsell') {
+        shouldCancel = true;
+        cancelReason = 'SKU为Upsell产品，无需结算';
+      }
+      
+      if (shouldCancel) {
+        try {
+          // 更新订单状态为cancel
+          await connection.execute(`
+            UPDATE ${order._tableName}
+            SET settlement_status = 'cancel',
+                settle_remark = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+          `, [cancelReason, order.id]);
+          
+          // 标记订单为已取消（用于后续过滤）
+          order.settlement_status = 'cancel';
+          order.settle_remark = cancelReason;
+          
+          cancelledCount++;
+          console.log(`🚫 订单 ${order.dxm_order_id} 已取消结算: ${cancelReason}`);
+        } catch (error) {
+          console.error(`❌ 取消订单 ${order.id} 结算时出错:`, error);
+          stats.errors.push(`取消结算错误: ${order.id} - ${error.message}`);
+        }
+      }
+    }
+    
+    if (cancelledCount > 0) {
+      console.log(`🚫 共取消 ${cancelledCount} 个订单的结算`);
+      stats.cancelledOrders = cancelledCount;
+    }
+  }
+
+  /**
+   * 检查备注是否包含"不结算"
+   * @param {Object} order - 订单数据
+   * @returns {boolean} 是否包含不结算标记
+   */
+  checkRemarkContainsNoSettlement(order) {
+    // 检查三个备注字段：客服备注、拣货备注、订单备注
+    const remarksToCheck = [
+      order.customer_remark,
+      order.picking_remark,
+      order.order_remark,
+      order.settle_remark  // 也检查结算备注
+    ];
+    
+    for (const remark of remarksToCheck) {
+      if (remark && typeof remark === 'string' && remark.includes('不结算')) {
+        return true;
+      }
+    }
+    
+    return false;
   }
 
   /**
