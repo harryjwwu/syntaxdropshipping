@@ -109,8 +109,8 @@ router.get('/orders', authenticateAdmin, async (req, res) => {
           SELECT id, dxm_order_id, dxm_client_id, order_id, country_code, 
                  product_count, buyer_name, product_name, payment_time,
                  product_sku, product_spu, unit_price, multi_total_price,
-                 discount, settlement_amount, settlement_status, settle_remark,
-                 settlement_record_id
+                 discount, settlement_amount, settlement_status, settlement_record_id,
+                 order_status, remark, settle_remark
           FROM ${tableName}
           WHERE payment_time BETWEEN ? AND ?
             AND dxm_client_id = ?
@@ -613,7 +613,8 @@ router.get('/records/:id', authenticateAdmin, async (req, res) => {
           SELECT id, dxm_order_id, dxm_client_id, order_id, country_code, 
                  product_count, buyer_name, product_name, payment_time,
                  product_sku, product_spu, unit_price, multi_total_price,
-                 discount, settlement_amount, settlement_status, settlement_record_id
+                 discount, settlement_amount, settlement_status, settlement_record_id,
+                 order_status, remark, settle_remark
           FROM ${tableName}
           WHERE settlement_record_id = ?
           ORDER BY payment_time
