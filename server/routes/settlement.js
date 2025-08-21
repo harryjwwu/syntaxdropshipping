@@ -547,8 +547,7 @@ router.get('/records', authenticateAdmin, async (req, res) => {
       countParams.push(dxm_client_id);
     }
     
-    query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
-    params.push(parseInt(limit), parseInt(offset));
+    query += ` ORDER BY created_at DESC LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}`;
     
     const [records] = await pool.execute(query, params);
     const [countResult] = await pool.execute(countQuery, countParams);
