@@ -243,72 +243,177 @@ const SettlementDetailPage = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     订单信息
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     买家信息
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    商品信息
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    产品信息
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     价格信息
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    结算金额
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    状态信息
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    备注信息
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {orders.map((order, index) => (
                   <tr key={`${order._tableName}-${order.id}`} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm">
-                        <div className="font-medium text-gray-900">#{order.dxm_order_id}</div>
-                        <div className="text-gray-500">{order.country_code}</div>
-                        <div className="text-gray-500">{new Date(order.payment_time).toLocaleString()}</div>
+                    {/* 订单信息 */}
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        #{order.dxm_order_id}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        客户ID: {order.dxm_client_id}
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        {order.country_code}
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        {new Date(order.payment_time).toLocaleString()}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm">
-                        <div className="font-medium text-gray-900">{order.buyer_name}</div>
+
+                    {/* 买家信息 */}
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        {order.buyer_name}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {order.country_code}
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        {new Date(order.payment_time).toLocaleDateString()}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm">
-                        <div className="font-medium text-gray-900">{order.product_name}</div>
-                        <div className="text-gray-500">SKU: {order.product_sku}</div>
-                        <div className="text-gray-500">SPU: {order.product_spu || '未设置'}</div>
-                        <div className="text-gray-500">数量: {order.product_count}</div>
+
+                    {/* 产品信息 */}
+                    <td className="px-4 py-4 max-w-xs">
+                      <div className="text-sm text-gray-900 truncate" title={order.product_name}>
+                        {order.product_name?.substring(0, 40)}
+                        {order.product_name?.length > 40 && '...'}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        SKU: {order.product_sku || '-'}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        SPU: {order.product_spu || '-'}
+                      </div>
+                      <div className="text-xs text-blue-600">
+                        数量: {order.product_count}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm">
-                        <div className="text-gray-900">
-                          单价: ¥{parseFloat(order.unit_price || 0).toFixed(2)}
-                        </div>
-                        {order.multi_total_price > 0 && (
-                          <div className="text-gray-900">
-                            多件价: ¥{parseFloat(order.multi_total_price || 0).toFixed(2)}
-                          </div>
-                        )}
-                        {order.discount > 0 && order.discount !== 1 && (
-                          <div className="text-blue-600">
-                            折扣: {(order.discount * 100).toFixed(1)}%
-                          </div>
-                        )}
+
+                    {/* 价格信息 */}
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        单件价: ¥{parseFloat(order.unit_price || 0).toFixed(2)}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        多件总价: ¥{parseFloat(order.multi_total_price || 0).toFixed(2)}
+                      </div>
+                      <div className="text-sm text-orange-600">
+                        折扣率: {(parseFloat(order.discount || 0) * 100).toFixed(1)}%
+                      </div>
+                      <div className="text-sm font-medium text-green-600">
+                        应收结算: ¥{parseFloat(order.settlement_amount || 0).toFixed(2)}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm">
-                        <div className="font-medium text-green-600">
-                          ¥{parseFloat(order.settlement_amount || 0).toFixed(2)}
-                        </div>
-                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                          已结算
+
+                    {/* 状态信息 */}
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <div className="mb-2">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          order.order_status === '已发货' ? 'bg-green-100 text-green-800' :
+                          order.order_status === '已处理' ? 'bg-green-100 text-green-800' :
+                          order.order_status === '已审核' ? 'bg-green-100 text-green-800' :
+                          order.order_status === '已退款' ? 'bg-red-100 text-red-800' :
+                          order.order_status === '未付款' ? 'bg-gray-100 text-gray-800' :
+                          order.order_status === '风控中' ? 'bg-red-100 text-red-800' :
+                          order.order_status === '待审核' ? 'bg-orange-100 text-orange-800' :
+                          order.order_status === '待处理' ? 'bg-blue-100 text-blue-800' :
+                          order.order_status === '待打单（有货）' ? 'bg-cyan-100 text-cyan-800' :
+                          order.order_status === '待打单（缺货）' ? 'bg-yellow-100 text-yellow-800' :
+                          order.order_status === '待打单（异常）' ? 'bg-red-100 text-red-800' :
+                          order.order_status === '已忽略' ? 'bg-gray-100 text-gray-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {order.order_status}
                         </span>
                       </div>
+                      <div className="text-xs">
+                        <span className={`inline-flex px-2 py-1 rounded-full text-xs ${
+                          order.settlement_status === 'calculated' ? 'bg-blue-100 text-blue-700' :
+                          order.settlement_status === 'settled' ? 'bg-green-100 text-green-700' :
+                          order.settlement_status === 'cancel' ? 'bg-red-100 text-red-700' :
+                          'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {order.settlement_status === 'waiting' ? '待结算' : 
+                           order.settlement_status === 'calculated' ? '已计算结算数据' :
+                           order.settlement_status === 'settled' ? '已结算' : '已取消'}
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* 备注信息 */}
+                    <td className="px-4 py-4 max-w-xs">
+                      {order.remark ? (
+                        <div className="text-xs space-y-1">
+                          {(() => {
+                            try {
+                              const remarkObj = JSON.parse(order.remark);
+                              return (
+                                <>
+                                  {remarkObj.customer_remark && (
+                                    <div className="text-blue-600">
+                                      <span className="font-medium">客服:</span> {remarkObj.customer_remark.substring(0, 30)}
+                                      {remarkObj.customer_remark.length > 30 && '...'}
+                                    </div>
+                                  )}
+                                  {remarkObj.picking_remark && (
+                                    <div className="text-green-600">
+                                      <span className="font-medium">拣货:</span> {remarkObj.picking_remark.substring(0, 30)}
+                                      {remarkObj.picking_remark.length > 30 && '...'}
+                                    </div>
+                                  )}
+                                  {remarkObj.order_remark && (
+                                    <div className="text-purple-600">
+                                      <span className="font-medium">订单:</span> {remarkObj.order_remark.substring(0, 30)}
+                                      {remarkObj.order_remark.length > 30 && '...'}
+                                    </div>
+                                  )}
+                                </>
+                              );
+                            } catch (e) {
+                              // 如果不是JSON格式，直接显示原始备注
+                              return (
+                                <div className="text-gray-600">
+                                  {order.remark.substring(0, 50)}
+                                  {order.remark.length > 50 && '...'}
+                                </div>
+                              );
+                            }
+                          })()}
+                        </div>
+                      ) : (
+                        <div className="text-gray-400 text-xs">无备注</div>
+                      )}
+                      
+                      {order.settle_remark && (
+                        <div className="text-xs text-orange-600 mt-2 border-t pt-1">
+                          <span className="font-medium">结算说明:</span> 
+                          <div className="mt-1">{order.settle_remark.substring(0, 50)}
+                          {order.settle_remark.length > 50 && '...'}</div>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
