@@ -12,7 +12,8 @@ import {
   ChevronDown,
   Package,
   DollarSign,
-  ShoppingCart
+  ShoppingCart,
+  Calculator
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -45,6 +46,12 @@ const AdminLayout = () => {
       name: '订单管理',
       href: '/orders',
       icon: ShoppingCart,
+      permission: 'system'
+    },
+    {
+      name: '结算管理',
+      href: '/settlement',
+      icon: Calculator,
       permission: 'system'
     },
     {

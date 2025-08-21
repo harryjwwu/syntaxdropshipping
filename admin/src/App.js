@@ -17,6 +17,7 @@ import SPUQuotesPage from './pages/SPUQuotesPage';
 import SPUQuoteFormPage from './pages/SPUQuoteFormPage';
 import SPUPriceHistoryPage from './pages/SPUPriceHistoryPage';
 import OrdersPage from './pages/OrdersPage';
+import SettlementPage from './pages/SettlementPage';
 
 function App() {
   return (
@@ -44,6 +45,7 @@ function App() {
               <Route path="spu-quotes/:id/edit" element={<SPUQuoteFormPage />} />
               <Route path="spu-price-history" element={<SPUPriceHistoryPage />} />
               <Route path="orders" element={<OrdersPage />} />
+              <Route path="settlement" element={<SettlementPage />} />
               <Route path="deposits" element={<DepositsPage />} />
               <Route path="users" element={<UsersPage />} />
               <Route path="users/:id" element={<UserDetailPage />} />

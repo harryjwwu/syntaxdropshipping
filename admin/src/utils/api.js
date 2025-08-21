@@ -293,7 +293,20 @@ export const adminAPI = {
   // COS相关
   getCOSConfig: () => api.get('/cos/config'),
   getCOSUploadSignature: (fileName, fileType = 'images') => api.post('/cos/signature', { fileName, fileType }),
-  deleteCOSFile: (data) => api.delete('/cos/delete', { data })
+  deleteCOSFile: (data) => api.delete('/cos/delete', { data }),
+
+  // ==================== 结算管理 API ====================
+  // 手动触发结算计算
+  calculateSettlement: (data) => api.post('/admin/settlement/calculate', data),
+  
+  // 获取结算订单列表
+  getSettlementOrders: (params) => api.get('/admin/settlement/orders', { params }),
+  
+  // 执行结算收款
+  executeSettlement: (data) => api.post('/admin/settlement/execute', data),
+  
+  // 获取结算统计
+  getSettlementStats: (date) => api.get(`/admin/settlement/stats/${date}`)
 };
 
 // 工具函数

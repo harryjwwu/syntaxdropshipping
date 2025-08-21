@@ -36,9 +36,10 @@ class SettlementManager {
   /**
    * 执行指定日期的订单结算
    * @param {string} settlementDate - 结算日期 (YYYY-MM-DD)
+   * @param {number} dxm_client_id - 可选的客户ID筛选
    * @returns {Object} 结算结果统计
    */
-  async settleOrdersByDate(settlementDate) {
+  async settleOrdersByDate(settlementDate, dxm_client_id = null) {
     const pool = await getConnection();
     const connection = await pool.getConnection();
     const startTime = `${settlementDate} 00:00:00`;
@@ -59,7 +60,7 @@ class SettlementManager {
       };
 
       // 获取所有表的待结算订单
-      const allOrders = await this.getPendingOrders(connection, startTime, endTime);
+      const allOrders = await this.getPendingOrders(connection, startTime, endTime, dxm_client_id);
       stats.processedOrders = allOrders.length;
 
       if (allOrders.length === 0) {
@@ -99,24 +100,34 @@ class SettlementManager {
    * @param {Object} connection - 数据库连接
    * @param {string} startTime - 开始时间
    * @param {string} endTime - 结束时间
+   * @param {number} dxm_client_id - 可选的客户ID筛选
    * @returns {Array} 订单列表
    */
-  async getPendingOrders(connection, startTime, endTime) {
+  async getPendingOrders(connection, startTime, endTime, dxm_client_id = null) {
     const allOrders = [];
     const tables = this.getAllOrderTableNames();
 
     for (const tableName of tables) {
       try {
-        const [rows] = await connection.execute(`
+        let query = `
           SELECT id, dxm_order_id, dxm_client_id, order_id, country_code, 
                  product_count, buyer_name, product_name, payment_time,
                  product_sku, product_spu, unit_price, multi_total_price,
                  discount, settlement_amount, settlement_status
           FROM ${tableName}
           WHERE payment_time BETWEEN ? AND ?
-            AND settlement_status = 'waiting'
-          ORDER BY dxm_client_id, buyer_name, payment_time
-        `, [startTime, endTime]);
+            AND settlement_status = 'waiting'`;
+        
+        let params = [startTime, endTime];
+        
+        if (dxm_client_id) {
+          query += ` AND dxm_client_id = ?`;
+          params.push(dxm_client_id);
+        }
+        
+        query += ` ORDER BY dxm_client_id, buyer_name, payment_time`;
+        
+        const [rows] = await connection.execute(query, params);
 
         // 为每个订单添加表名信息
         const ordersWithTable = rows.map(order => ({

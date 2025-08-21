@@ -7,13 +7,13 @@ const SettlementManager = require('../utils/settlementManager');
 const settlementManager = new SettlementManager();
 
 /**
- * 执行指定日期的订单结算
- * POST /api/settlement/settle
- * Body: { settlementDate: "YYYY-MM-DD" }
+ * 手动触发结算计算
+ * POST /api/settlement/calculate
+ * Body: { settlementDate: "YYYY-MM-DD", dxm_client_id?: number }
  */
-router.post('/settle', authenticateAdmin, async (req, res) => {
+router.post('/calculate', authenticateAdmin, async (req, res) => {
   try {
-    const { settlementDate } = req.body;
+    const { settlementDate, dxm_client_id } = req.body;
 
     if (!settlementDate) {
       return res.status(400).json({
@@ -31,28 +31,284 @@ router.post('/settle', authenticateAdmin, async (req, res) => {
       });
     }
 
-    console.log(`管理员 ${req.admin.email} 开始结算 ${settlementDate} 的订单`);
+    // 验证不能选择当天
+    const today = new Date().toISOString().split('T')[0];
+    if (settlementDate >= today) {
+      return res.status(400).json({
+        success: false,
+        message: '只能选择前一天的日期，不能选择当天或未来日期'
+      });
+    }
+
+    console.log(`管理员 ${req.admin.email} 手动触发结算计算 ${settlementDate} 的订单${dxm_client_id ? ` (客户ID: ${dxm_client_id})` : ''}`);
 
     const startTime = Date.now();
-    const stats = await settlementManager.settleOrdersByDate(settlementDate);
+    const stats = await settlementManager.settleOrdersByDate(settlementDate, dxm_client_id);
     const endTime = Date.now();
 
     res.json({
       success: true,
-      message: '结算完成',
+      message: '结算计算完成',
       data: {
         settlementDate,
+        dxm_client_id: dxm_client_id || 'all',
         processingTime: `${endTime - startTime}ms`,
         ...stats
       }
     });
 
   } catch (error) {
-    console.error('订单结算失败:', error);
+    console.error('结算计算失败:', error);
     res.status(500).json({
       success: false,
-      message: '结算失败: ' + error.message,
+      message: '结算计算失败: ' + error.message,
       error: error.stack
+    });
+  }
+});
+
+/**
+ * 获取指定客户的结算订单列表
+ * GET /api/settlement/orders
+ * Query: { settlementDate: "YYYY-MM-DD", dxm_client_id: number }
+ */
+router.get('/orders', authenticateAdmin, async (req, res) => {
+  try {
+    const { settlementDate, dxm_client_id } = req.query;
+
+    if (!settlementDate || !dxm_client_id) {
+      return res.status(400).json({
+        success: false,
+        message: '请提供结算日期和客户ID'
+      });
+    }
+
+    // 验证日期格式
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(settlementDate)) {
+      return res.status(400).json({
+        success: false,
+        message: '日期格式错误，请使用 YYYY-MM-DD 格式'
+      });
+    }
+
+    const pool = await getConnection();
+    const startTime = `${settlementDate} 00:00:00`;
+    const endTime = `${settlementDate} 23:59:59`;
+
+    // 获取所有分表的订单数据
+    const allOrders = [];
+    const waitingOrders = [];
+    const calculatedOrders = [];
+    
+    const tables = settlementManager.getAllOrderTableNames();
+    
+    for (const tableName of tables) {
+      try {
+        const [rows] = await pool.execute(`
+          SELECT id, dxm_order_id, dxm_client_id, order_id, country_code, 
+                 product_count, buyer_name, product_name, payment_time,
+                 product_sku, product_spu, unit_price, multi_total_price,
+                 discount, settlement_amount, settlement_status, settle_remark,
+                 settlement_record_id
+          FROM ${tableName}
+          WHERE payment_time BETWEEN ? AND ?
+            AND dxm_client_id = ?
+          ORDER BY payment_time
+        `, [startTime, endTime, dxm_client_id]);
+
+        const ordersWithTable = rows.map(order => ({
+          ...order,
+          _tableName: tableName
+        }));
+
+        allOrders.push(...ordersWithTable);
+        
+        // 分类订单状态
+        ordersWithTable.forEach(order => {
+          if (order.settlement_status === 'waiting') {
+            waitingOrders.push(order);
+          } else if (order.settlement_status === 'calculated') {
+            calculatedOrders.push(order);
+          }
+        });
+      } catch (error) {
+        console.warn(`查询表 ${tableName} 时出错:`, error.message);
+      }
+    }
+
+    // 计算统计信息
+    const totalSettlementAmount = calculatedOrders.reduce((sum, order) => 
+      sum + parseFloat(order.settlement_amount || 0), 0
+    );
+
+    res.json({
+      success: true,
+      data: {
+        settlementDate,
+        dxm_client_id: parseInt(dxm_client_id),
+        summary: {
+          totalOrders: allOrders.length,
+          waitingOrders: waitingOrders.length,
+          calculatedOrders: calculatedOrders.length,
+          totalSettlementAmount: totalSettlementAmount.toFixed(2),
+          canSettle: waitingOrders.length === 0 && calculatedOrders.length > 0
+        },
+        orders: {
+          all: allOrders,
+          waiting: waitingOrders,
+          calculated: calculatedOrders
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('获取结算订单列表失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '获取订单列表失败: ' + error.message
+    });
+  }
+});
+
+/**
+ * 执行结算收款
+ * POST /api/settlement/execute
+ * Body: { settlementDate: "YYYY-MM-DD", dxm_client_id: number }
+ */
+router.post('/execute', authenticateAdmin, async (req, res) => {
+  try {
+    const { settlementDate, dxm_client_id } = req.body;
+
+    if (!settlementDate || !dxm_client_id) {
+      return res.status(400).json({
+        success: false,
+        message: '请提供结算日期和客户ID'
+      });
+    }
+
+    // 验证日期格式
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(settlementDate)) {
+      return res.status(400).json({
+        success: false,
+        message: '日期格式错误，请使用 YYYY-MM-DD 格式'
+      });
+    }
+
+    const pool = await getConnection();
+    const connection = await pool.getConnection();
+    
+    try {
+      await connection.beginTransaction();
+
+      const startTime = `${settlementDate} 00:00:00`;
+      const endTime = `${settlementDate} 23:59:59`;
+
+      // 检查是否有waiting状态的订单
+      const tables = settlementManager.getAllOrderTableNames();
+      let hasWaitingOrders = false;
+      let calculatedOrders = [];
+
+      for (const tableName of tables) {
+        const [waitingCheck] = await connection.execute(`
+          SELECT COUNT(*) as count FROM ${tableName}
+          WHERE payment_time BETWEEN ? AND ?
+            AND dxm_client_id = ?
+            AND settlement_status = 'waiting'
+        `, [startTime, endTime, dxm_client_id]);
+
+        if (waitingCheck[0].count > 0) {
+          hasWaitingOrders = true;
+          break;
+        }
+
+        // 获取calculated状态的订单
+        const [calculatedRows] = await connection.execute(`
+          SELECT id, settlement_amount FROM ${tableName}
+          WHERE payment_time BETWEEN ? AND ?
+            AND dxm_client_id = ?
+            AND settlement_status = 'calculated'
+        `, [startTime, endTime, dxm_client_id]);
+
+        calculatedOrders.push(...calculatedRows.map(order => ({
+          ...order,
+          _tableName: tableName
+        })));
+      }
+
+      if (hasWaitingOrders) {
+        await connection.rollback();
+        return res.status(400).json({
+          success: false,
+          message: '存在等待计算的订单，请先完成结算计算再执行结算'
+        });
+      }
+
+      if (calculatedOrders.length === 0) {
+        await connection.rollback();
+        return res.status(400).json({
+          success: false,
+          message: '没有找到可结算的订单'
+        });
+      }
+
+      // 计算总结算金额
+      const totalSettlementAmount = calculatedOrders.reduce((sum, order) => 
+        sum + parseFloat(order.settlement_amount || 0), 0
+      );
+
+      // 生成结算记录ID
+      const dateStr = settlementDate.replace(/-/g, '');
+      const randomNum = Math.floor(1000 + Math.random() * 9000);
+      const settlementRecordId = `${dateStr}${randomNum}`;
+
+      // 创建结算记录
+      await connection.execute(`
+        INSERT INTO settlement_records 
+        (id, dxm_client_id, settlement_date, total_settlement_amount, order_count, created_by, status)
+        VALUES (?, ?, ?, ?, ?, ?, 'completed')
+      `, [settlementRecordId, dxm_client_id, settlementDate, totalSettlementAmount, calculatedOrders.length, req.admin.id]);
+
+      // 更新所有相关订单状态为settled，并关联结算记录ID
+      for (const order of calculatedOrders) {
+        await connection.execute(`
+          UPDATE ${order._tableName}
+          SET settlement_status = 'settled',
+              settlement_record_id = ?,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `, [settlementRecordId, order.id]);
+      }
+
+      await connection.commit();
+
+      console.log(`管理员 ${req.admin.email} 完成结算: ${settlementRecordId}, 客户: ${dxm_client_id}, 金额: ${totalSettlementAmount}`);
+
+      res.json({
+        success: true,
+        message: '结算执行成功',
+        data: {
+          settlementRecordId,
+          settlementDate,
+          dxm_client_id: parseInt(dxm_client_id),
+          totalSettlementAmount: totalSettlementAmount.toFixed(2),
+          orderCount: calculatedOrders.length
+        }
+      });
+
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+
+  } catch (error) {
+    console.error('执行结算失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '执行结算失败: ' + error.message
     });
   }
 });
