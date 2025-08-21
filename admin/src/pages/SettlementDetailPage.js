@@ -19,7 +19,13 @@ const SettlementDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [settlementRecord, setSettlementRecord] = useState(null);
   const [orders, setOrders] = useState([]);
+  const [allOrders, setAllOrders] = useState([]);
   const [error, setError] = useState(null);
+  
+  // 分页状态
+  const [currentPage, setCurrentPage] = useState(1);
+  const [ordersPerPage] = useState(10);
+  const [totalOrders, setTotalOrders] = useState(0);
 
   useEffect(() => {
     fetchSettlementDetail();
@@ -32,7 +38,12 @@ const SettlementDetailPage = () => {
     try {
       const response = await adminAPI.getSettlementRecordDetail(recordId);
       setSettlementRecord(response.data.record);
-      setOrders(response.data.orders || []);
+      const allOrdersData = response.data.orders || [];
+      setAllOrders(allOrdersData);
+      setTotalOrders(allOrdersData.length);
+      
+      // 设置第一页的订单数据
+      paginateOrders(1, allOrdersData);
     } catch (error) {
       console.error('获取结算详情失败:', error);
       setError(error.response?.data?.message || '获取结算详情失败');
@@ -40,6 +51,23 @@ const SettlementDetailPage = () => {
       setLoading(false);
     }
   };
+
+  // 分页处理函数
+  const paginateOrders = (page, ordersData = allOrders) => {
+    const startIndex = (page - 1) * ordersPerPage;
+    const endIndex = startIndex + ordersPerPage;
+    const paginatedOrders = ordersData.slice(startIndex, endIndex);
+    setOrders(paginatedOrders);
+    setCurrentPage(page);
+  };
+
+  // 处理页面变化
+  const handlePageChange = (page) => {
+    paginateOrders(page);
+  };
+
+  // 计算总页数
+  const totalPages = Math.ceil(totalOrders / ordersPerPage);
 
   if (loading) {
     return (
@@ -174,8 +202,10 @@ const SettlementDetailPage = () => {
               <div className="flex items-center">
                 <Calendar className="w-8 h-8 text-gray-600 mr-3" />
                 <div>
-                  <p className="text-sm text-gray-600 font-medium">结算日期</p>
-                  <p className="text-2xl font-bold text-gray-900">{settlementRecord.settlement_date}</p>
+                  <p className="text-sm text-gray-600 font-medium">结算周期</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {settlementRecord.start_settlement_date} 至 {settlementRecord.end_settlement_date}
+                  </p>
                 </div>
               </div>
             </div>
@@ -219,6 +249,43 @@ const SettlementDetailPage = () => {
         </div>
       </div>
 
+      {/* 结算统计 */}
+      <div className="bg-white rounded-lg shadow border border-gray-200">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-medium text-gray-900">结算统计</h2>
+        </div>
+        
+        <div className="p-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-gray-900">{totalOrders}</div>
+              <div className="text-sm text-gray-600">订单总数</div>
+            </div>
+            
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">
+                ¥{allOrders.reduce((sum, order) => sum + parseFloat(order.settlement_amount || 0), 0).toFixed(2)}
+              </div>
+              <div className="text-sm text-gray-600">结算总金额</div>
+            </div>
+            
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">
+                ¥{totalOrders > 0 ? (allOrders.reduce((sum, order) => sum + parseFloat(order.settlement_amount || 0), 0) / totalOrders).toFixed(2) : '0.00'}
+              </div>
+              <div className="text-sm text-gray-600">平均订单金额</div>
+            </div>
+            
+            <div className="text-center">
+              <div className="text-2xl font-bold text-purple-600">
+                {allOrders.reduce((sum, order) => sum + (order.product_count || 0), 0)}
+              </div>
+              <div className="text-sm text-gray-600">商品总数量</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* 订单列表 */}
       <div className="bg-white rounded-lg shadow border border-gray-200">
         <div className="px-6 py-4 border-b border-gray-200">
@@ -226,12 +293,12 @@ const SettlementDetailPage = () => {
             <div className="flex items-center">
               <Package className="w-5 h-5 text-blue-600 mr-2" />
               <h2 className="text-lg font-medium text-gray-900">
-                订单详情 ({orders.length} 个订单)
+                订单详情 (第 {currentPage} 页，共 {totalPages} 页，总计 {totalOrders} 个订单)
               </h2>
             </div>
             
             <div className="text-sm text-gray-600">
-              总结算金额: <span className="font-medium text-green-600">
+              当前页结算金额: <span className="font-medium text-green-600">
                 ¥{orders.reduce((sum, order) => sum + parseFloat(order.settlement_amount || 0), 0).toFixed(2)}
               </span>
             </div>
@@ -426,43 +493,66 @@ const SettlementDetailPage = () => {
             <p className="text-gray-500">该结算记录下没有订单</p>
           </div>
         )}
-      </div>
-
-      {/* 统计摘要 */}
-      <div className="bg-white rounded-lg shadow border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-medium text-gray-900">结算统计</h2>
-        </div>
         
-        <div className="p-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900">{orders.length}</div>
-              <div className="text-sm text-gray-600">订单总数</div>
-            </div>
-            
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">
-                ¥{orders.reduce((sum, order) => sum + parseFloat(order.settlement_amount || 0), 0).toFixed(2)}
+        {/* 分页组件 */}
+        {totalPages > 1 && (
+          <div className="px-6 py-4 border-t border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-gray-700">
+                显示第 {((currentPage - 1) * ordersPerPage) + 1} 到{' '}
+                {Math.min(currentPage * ordersPerPage, totalOrders)} 条，
+                共 {totalOrders} 条记录
               </div>
-              <div className="text-sm text-gray-600">结算总金额</div>
-            </div>
-            
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">
-                ¥{orders.length > 0 ? (orders.reduce((sum, order) => sum + parseFloat(order.settlement_amount || 0), 0) / orders.length).toFixed(2) : '0.00'}
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage <= 1}
+                  className="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  上一页
+                </button>
+                
+                {/* 页码按钮 */}
+                <div className="flex items-center space-x-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => handlePageChange(pageNum)}
+                        className={`px-3 py-1 text-sm font-medium rounded-md ${
+                          currentPage === pageNum
+                            ? 'bg-blue-600 text-white'
+                            : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
+                
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage >= totalPages}
+                  className="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  下一页
+                </button>
               </div>
-              <div className="text-sm text-gray-600">平均订单金额</div>
-            </div>
-            
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">
-                {orders.reduce((sum, order) => sum + (order.product_count || 0), 0)}
-              </div>
-              <div className="text-sm text-gray-600">商品总数量</div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

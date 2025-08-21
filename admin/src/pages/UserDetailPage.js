@@ -217,6 +217,28 @@ const UserDetailPage = () => {
                     注册时间: {apiUtils.formatDate(user.created_at)}
                   </span>
                 </div>
+                {/* 邀请人信息 */}
+                <div className="mt-3 p-3 bg-slate-50 rounded-lg">
+                  <h4 className="text-sm font-medium text-slate-700 mb-2">邀请信息</h4>
+                  {user.referrer_id ? (
+                    <div className="text-sm">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-slate-600">来自邀请人:</span>
+                        <span className="font-medium text-slate-900">
+                          {user.referrer_name || '未设置姓名'}
+                        </span>
+                        <span className="text-slate-500">(ID: {user.referrer_id})</span>
+                      </div>
+                      <div className="mt-1 text-slate-500 text-xs">
+                        {user.referrer_email}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-slate-500">
+                      自主注册，无邀请人
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             

@@ -9,48 +9,97 @@ const settlementManager = new SettlementManager();
 /**
  * 手动触发结算计算
  * POST /api/settlement/calculate
- * Body: { settlementDate: "YYYY-MM-DD", dxm_client_id?: number }
+ * Body: { startDate: "YYYY-MM-DD", endDate: "YYYY-MM-DD", dxm_client_id?: number }
  */
 router.post('/calculate', authenticateAdmin, async (req, res) => {
   try {
-    const { settlementDate, dxm_client_id } = req.body;
+    const { startDate, endDate, dxm_client_id } = req.body;
 
-    if (!settlementDate) {
+    if (!startDate || !endDate) {
       return res.status(400).json({
         success: false,
-        message: '请提供结算日期'
+        message: '请提供开始日期和结束日期'
       });
     }
 
     // 验证日期格式
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(settlementDate)) {
+    if (!dateRegex.test(startDate) || !dateRegex.test(endDate)) {
       return res.status(400).json({
         success: false,
         message: '日期格式错误，请使用 YYYY-MM-DD 格式'
       });
     }
 
-    // 验证不能选择当天
-    const today = new Date().toISOString().split('T')[0];
-    if (settlementDate >= today) {
+    // 验证日期逻辑
+    if (new Date(startDate) > new Date(endDate)) {
       return res.status(400).json({
         success: false,
-        message: '只能选择前一天的日期，不能选择当天或未来日期'
+        message: '开始日期不能晚于结束日期'
       });
     }
 
-    console.log(`管理员 ${req.admin.email} 手动触发结算计算 ${settlementDate} 的订单${dxm_client_id ? ` (客户ID: ${dxm_client_id})` : ''}`);
+    // 验证结束日期不能选择当天
+    const today = new Date().toISOString().split('T')[0];
+    if (endDate >= today) {
+      return res.status(400).json({
+        success: false,
+        message: '结束日期只能选择前一天的日期，不能选择当天或未来日期'
+      });
+    }
+
+    console.log(`管理员 ${req.admin.email} 手动触发结算计算 ${startDate} 到 ${endDate} 的订单${dxm_client_id ? ` (客户ID: ${dxm_client_id})` : ''}`);
 
     const startTime = Date.now();
-    const stats = await settlementManager.settleOrdersByDate(settlementDate, dxm_client_id);
+    
+    // 如果是单日结算，使用原始方法；如果是日期范围，循环调用原始方法
+    let stats = {
+      processedOrders: 0,
+      settledOrders: 0,
+      cancelledOrders: 0,
+      errors: [],
+      userDiscounts: 0,
+      spuPrices: 0,
+      skippedOrders: 0
+    };
+    
+    // 生成日期范围内的所有日期
+    const currentDate = new Date(startDate);
+    const endDateObj = new Date(endDate);
+    
+    while (currentDate <= endDateObj) {
+      const dateStr = currentDate.toISOString().split('T')[0];
+      console.log(`处理日期: ${dateStr}`);
+      
+      try {
+        const dayStats = await settlementManager.settleOrdersByDate(dateStr, dxm_client_id);
+        
+        // 累加统计数据
+        stats.processedOrders += dayStats.processedOrders;
+        stats.settledOrders += dayStats.settledOrders;
+        stats.cancelledOrders += dayStats.cancelledOrders;
+        stats.userDiscounts += dayStats.userDiscounts;
+        stats.spuPrices += dayStats.spuPrices;
+        stats.skippedOrders += dayStats.skippedOrders;
+        stats.errors.push(...(dayStats.errors || []));
+        
+      } catch (error) {
+        console.error(`处理日期 ${dateStr} 时出错:`, error);
+        stats.errors.push(`日期 ${dateStr}: ${error.message}`);
+      }
+      
+      // 移动到下一天
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
     const endTime = Date.now();
 
     res.json({
       success: true,
       message: '结算计算完成',
       data: {
-        settlementDate,
+        startDate,
+        endDate,
         dxm_client_id: dxm_client_id || 'all',
         processingTime: `${endTime - startTime}ms`,
         ...stats
@@ -70,31 +119,39 @@ router.post('/calculate', authenticateAdmin, async (req, res) => {
 /**
  * 获取指定客户的结算订单列表
  * GET /api/settlement/orders
- * Query: { settlementDate: "YYYY-MM-DD", dxm_client_id: number }
+ * Query: { startDate: "YYYY-MM-DD", endDate: "YYYY-MM-DD", dxm_client_id: number }
  */
 router.get('/orders', authenticateAdmin, async (req, res) => {
   try {
-    const { settlementDate, dxm_client_id } = req.query;
+    const { startDate, endDate, dxm_client_id } = req.query;
 
-    if (!settlementDate || !dxm_client_id) {
+    if (!startDate || !endDate || !dxm_client_id) {
       return res.status(400).json({
         success: false,
-        message: '请提供结算日期和客户ID'
+        message: '请提供开始日期、结束日期和客户ID'
       });
     }
 
     // 验证日期格式
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(settlementDate)) {
+    if (!dateRegex.test(startDate) || !dateRegex.test(endDate)) {
       return res.status(400).json({
         success: false,
         message: '日期格式错误，请使用 YYYY-MM-DD 格式'
       });
     }
 
+    // 验证日期逻辑
+    if (new Date(startDate) > new Date(endDate)) {
+      return res.status(400).json({
+        success: false,
+        message: '开始日期不能晚于结束日期'
+      });
+    }
+
     const pool = await getConnection();
-    const startTime = `${settlementDate} 00:00:00`;
-    const endTime = `${settlementDate} 23:59:59`;
+    const startTime = `${startDate} 00:00:00`;
+    const endTime = `${endDate} 23:59:59`;
 
     // 获取所有分表的订单数据
     const allOrders = [];
@@ -145,7 +202,8 @@ router.get('/orders', authenticateAdmin, async (req, res) => {
     res.json({
       success: true,
       data: {
-        settlementDate,
+        startDate,
+        endDate,
         dxm_client_id: parseInt(dxm_client_id),
         summary: {
           totalOrders: allOrders.length,
@@ -174,25 +232,33 @@ router.get('/orders', authenticateAdmin, async (req, res) => {
 /**
  * 执行结算收款
  * POST /api/settlement/execute
- * Body: { settlementDate: "YYYY-MM-DD", dxm_client_id: number }
+ * Body: { startDate: "YYYY-MM-DD", endDate: "YYYY-MM-DD", dxm_client_id: number }
  */
 router.post('/execute', authenticateAdmin, async (req, res) => {
   try {
-    const { settlementDate, dxm_client_id } = req.body;
+    const { startDate, endDate, dxm_client_id } = req.body;
 
-    if (!settlementDate || !dxm_client_id) {
+    if (!startDate || !endDate || !dxm_client_id) {
       return res.status(400).json({
         success: false,
-        message: '请提供结算日期和客户ID'
+        message: '请提供开始日期、结束日期和客户ID'
       });
     }
 
     // 验证日期格式
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(settlementDate)) {
+    if (!dateRegex.test(startDate) || !dateRegex.test(endDate)) {
       return res.status(400).json({
         success: false,
         message: '日期格式错误，请使用 YYYY-MM-DD 格式'
+      });
+    }
+
+    // 验证日期逻辑
+    if (new Date(startDate) > new Date(endDate)) {
+      return res.status(400).json({
+        success: false,
+        message: '开始日期不能晚于结束日期'
       });
     }
 
@@ -202,8 +268,8 @@ router.post('/execute', authenticateAdmin, async (req, res) => {
     try {
       await connection.beginTransaction();
 
-      const startTime = `${settlementDate} 00:00:00`;
-      const endTime = `${settlementDate} 23:59:59`;
+      const startTime = `${startDate} 00:00:00`;
+      const endTime = `${endDate} 23:59:59`;
 
       // 检查是否有waiting状态的订单
       const tables = settlementManager.getAllOrderTableNames();
@@ -259,16 +325,16 @@ router.post('/execute', authenticateAdmin, async (req, res) => {
       );
 
       // 生成结算记录ID
-      const dateStr = settlementDate.replace(/-/g, '');
+      const dateStr = endDate.replace(/-/g, '');
       const randomNum = Math.floor(1000 + Math.random() * 9000);
       const settlementRecordId = `${dateStr}${randomNum}`;
 
-      // 创建结算记录
+      // 创建结算记录，使用新的日期范围字段
       await connection.execute(`
         INSERT INTO settlement_records 
-        (id, dxm_client_id, settlement_date, total_settlement_amount, order_count, created_by, status)
-        VALUES (?, ?, ?, ?, ?, ?, 'completed')
-      `, [settlementRecordId, dxm_client_id, settlementDate, totalSettlementAmount, calculatedOrders.length, req.admin.id]);
+        (id, dxm_client_id, start_settlement_date, end_settlement_date, total_settlement_amount, order_count, created_by, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'completed')
+      `, [settlementRecordId, dxm_client_id, startDate, endDate, totalSettlementAmount, calculatedOrders.length, req.admin.id]);
 
       // 更新所有相关订单状态为settled，并关联结算记录ID
       for (const order of calculatedOrders) {
@@ -290,7 +356,8 @@ router.post('/execute', authenticateAdmin, async (req, res) => {
         message: '结算执行成功',
         data: {
           settlementRecordId,
-          settlementDate,
+          startDate,
+          endDate,
           dxm_client_id: parseInt(dxm_client_id),
           totalSettlementAmount: totalSettlementAmount.toFixed(2),
           orderCount: calculatedOrders.length
@@ -531,8 +598,10 @@ router.get('/records', authenticateAdmin, async (req, res) => {
     const pool = await getConnection();
     
     let query = `
-      SELECT id, dxm_client_id, settlement_date, total_settlement_amount, 
-             order_count, status, created_by, notes, created_at, updated_at
+      SELECT id, dxm_client_id, 
+             DATE_FORMAT(start_settlement_date, '%Y-%m-%d') as start_settlement_date,
+             DATE_FORMAT(end_settlement_date, '%Y-%m-%d') as end_settlement_date,
+             total_settlement_amount, order_count, status, created_by, notes, created_at, updated_at
       FROM settlement_records
     `;
     
@@ -588,8 +657,10 @@ router.get('/records/:id', authenticateAdmin, async (req, res) => {
     
     // 获取结算记录详情
     const [records] = await pool.execute(`
-      SELECT id, dxm_client_id, settlement_date, total_settlement_amount, 
-             order_count, status, created_by, notes, created_at, updated_at
+      SELECT id, dxm_client_id, 
+             DATE_FORMAT(start_settlement_date, '%Y-%m-%d') as start_settlement_date,
+             DATE_FORMAT(end_settlement_date, '%Y-%m-%d') as end_settlement_date,
+             total_settlement_amount, order_count, status, created_by, notes, created_at, updated_at
       FROM settlement_records
       WHERE id = ?
     `, [id]);

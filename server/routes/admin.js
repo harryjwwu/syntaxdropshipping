@@ -459,13 +459,28 @@ router.get('/users', authenticateAdmin, async (req, res) => {
       }
     }
 
-    // 获取用户列表（包含钱包信息和活跃度）
+    // 获取用户列表（包含钱包信息、活跃度和邀请人信息，排除密码字段）
     const query = `
       SELECT 
-        u.*,
+        u.id,
+        u.email,
+        u.dxm_client_id,
+        u.name,
+        u.company,
+        u.phone,
+        u.address,
+        u.role,
+        u.is_active,
+        u.referral_code,
+        u.referred_by,
+        u.created_at,
+        u.updated_at,
         uw.balance,
         uw.total_deposited,
         uw.total_withdrawn,
+        referrer.id as referrer_id,
+        referrer.name as referrer_name,
+        referrer.email as referrer_email,
         (SELECT COUNT(*) FROM deposit_records dr WHERE dr.user_id = u.id) as deposit_count,
         (SELECT COUNT(*) FROM deposit_records dr WHERE dr.user_id = u.id AND dr.status = 'approved') as approved_deposits,
         (SELECT MAX(dr.created_at) FROM deposit_records dr WHERE dr.user_id = u.id) as last_deposit_at,
@@ -486,6 +501,7 @@ router.get('/users', authenticateAdmin, async (req, res) => {
         END as activity_status
       FROM users u
       LEFT JOIN user_wallets uw ON u.id = uw.user_id
+      LEFT JOIN users referrer ON u.referred_by = referrer.id
       ${whereClause}
       ORDER BY u.created_at DESC
       LIMIT ${limitNum} OFFSET ${offset}
@@ -592,18 +608,34 @@ router.get('/users/:id', authenticateAdmin, async (req, res) => {
     const { id } = req.params;
     const connection = await getConnection();
 
-    // 获取用户基本信息和钱包信息
+    // 获取用户基本信息、钱包信息和邀请人信息（排除密码字段）
     const [users] = await connection.execute(`
       SELECT 
-        u.*,
+        u.id,
+        u.email,
+        u.dxm_client_id,
+        u.name,
+        u.company,
+        u.phone,
+        u.address,
+        u.role,
+        u.is_active,
+        u.referral_code,
+        u.referred_by,
+        u.created_at,
+        u.updated_at,
         uw.balance,
         uw.frozen_balance,
         uw.total_deposited,
         uw.total_withdrawn,
         uw.created_at as wallet_created_at,
-        uw.updated_at as wallet_updated_at
+        uw.updated_at as wallet_updated_at,
+        referrer.id as referrer_id,
+        referrer.name as referrer_name,
+        referrer.email as referrer_email
       FROM users u
       LEFT JOIN user_wallets uw ON u.id = uw.user_id
+      LEFT JOIN users referrer ON u.referred_by = referrer.id
       WHERE u.id = ?
     `, [id]);
 

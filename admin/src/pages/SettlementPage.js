@@ -16,11 +16,13 @@ const SettlementPage = () => {
   const [activeTab, setActiveTab] = useState('calculate');
   const [loading, setLoading] = useState(false);
   const [calculateForm, setCalculateForm] = useState({
-    settlementDate: '',
+    startDate: '',
+    endDate: '',
     dxm_client_id: ''
   });
   const [manageForm, setManageForm] = useState({
-    settlementDate: '',
+    startDate: '',
+    endDate: '',
     dxm_client_id: ''
   });
   const [calculateResult, setCalculateResult] = useState(null);
@@ -38,15 +40,21 @@ const SettlementPage = () => {
   // 手动触发结算计算
   const handleCalculateSettlement = async (e) => {
     e.preventDefault();
-    if (!calculateForm.settlementDate) {
-      alert('请选择结算日期');
+    if (!calculateForm.startDate || !calculateForm.endDate) {
+      alert('请选择开始日期和结束日期');
+      return;
+    }
+    
+    if (new Date(calculateForm.startDate) > new Date(calculateForm.endDate)) {
+      alert('开始日期不能晚于结束日期');
       return;
     }
 
     setLoading(true);
     try {
       const response = await adminAPI.calculateSettlement({
-        settlementDate: calculateForm.settlementDate,
+        startDate: calculateForm.startDate,
+        endDate: calculateForm.endDate,
         dxm_client_id: calculateForm.dxm_client_id || undefined
       });
 
@@ -62,15 +70,21 @@ const SettlementPage = () => {
   // 获取结算订单列表
   const handleGetSettlementOrders = async (e) => {
     e.preventDefault();
-    if (!manageForm.settlementDate || !manageForm.dxm_client_id) {
-      alert('请选择结算日期和输入客户ID');
+    if (!manageForm.startDate || !manageForm.endDate || !manageForm.dxm_client_id) {
+      alert('请选择开始日期、结束日期和输入客户ID');
+      return;
+    }
+    
+    if (new Date(manageForm.startDate) > new Date(manageForm.endDate)) {
+      alert('开始日期不能晚于结束日期');
       return;
     }
 
     setLoading(true);
     try {
       const response = await adminAPI.getSettlementOrders({
-        settlementDate: manageForm.settlementDate,
+        startDate: manageForm.startDate,
+        endDate: manageForm.endDate,
         dxm_client_id: manageForm.dxm_client_id
       });
 
@@ -88,7 +102,8 @@ const SettlementPage = () => {
     setLoading(true);
     try {
       const response = await adminAPI.executeSettlement({
-        settlementDate: manageForm.settlementDate,
+        startDate: manageForm.startDate,
+        endDate: manageForm.endDate,
         dxm_client_id: parseInt(manageForm.dxm_client_id)
       });
 
@@ -184,26 +199,43 @@ const SettlementPage = () => {
                   <div>
                     <h3 className="text-sm font-medium text-blue-800">手动触发结算计算</h3>
                     <p className="text-sm text-blue-700 mt-1">
-                      选择日期并可选择特定客户进行结算计算。注意：仅支持前一天的日期，不能选择当天。
+                      选择日期范围并可选择特定客户进行结算计算。注意：结束日期仅支持前一天的日期，不能选择当天。
                     </p>
                   </div>
                 </div>
               </div>
 
               <form onSubmit={handleCalculateSettlement} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       <Calendar className="w-4 h-4 inline mr-1" />
-                      结算日期 *
+                      开始日期 *
                     </label>
                     <input
                       type="date"
-                      value={calculateForm.settlementDate}
+                      value={calculateForm.startDate}
+                      onChange={(e) => setCalculateForm(prev => ({
+                        ...prev,
+                        startDate: e.target.value
+                      }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <Calendar className="w-4 h-4 inline mr-1" />
+                      结束日期 *
+                    </label>
+                    <input
+                      type="date"
+                      value={calculateForm.endDate}
                       max={getMaxDate()}
                       onChange={(e) => setCalculateForm(prev => ({
                         ...prev,
-                        settlementDate: e.target.value
+                        endDate: e.target.value
                       }))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       required
@@ -245,37 +277,99 @@ const SettlementPage = () => {
 
               {/* 计算结果 */}
               {calculateResult && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <h3 className="text-lg font-medium text-green-800 mb-3">
-                    <CheckCircle className="w-5 h-5 inline mr-2" />
-                    结算计算完成
-                  </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-600">处理订单:</span>
-                      <span className="font-medium ml-2">{calculateResult.processedOrders}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">成功结算:</span>
-                      <span className="font-medium ml-2">{calculateResult.settledOrders}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">跳过订单:</span>
-                      <span className="font-medium ml-2">{calculateResult.skippedOrders}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">处理时间:</span>
-                      <span className="font-medium ml-2">{calculateResult.processingTime}</span>
+                <div className="space-y-4">
+                  <div className={`border rounded-lg p-4 ${
+                    calculateResult.settledOrders > 0 
+                      ? 'bg-green-50 border-green-200' 
+                      : 'bg-yellow-50 border-yellow-200'
+                  }`}>
+                    <h3 className={`text-lg font-medium mb-3 ${
+                      calculateResult.settledOrders > 0 
+                        ? 'text-green-800' 
+                        : 'text-yellow-800'
+                    }`}>
+                      <CheckCircle className="w-5 h-5 inline mr-2" />
+                      结算计算完成
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-600">处理订单:</span>
+                        <span className="font-medium ml-2">{calculateResult.processedOrders}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">成功结算:</span>
+                        <span className={`font-medium ml-2 ${
+                          calculateResult.settledOrders > 0 ? 'text-green-600' : 'text-red-600'
+                        }`}>{calculateResult.settledOrders}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">跳过订单:</span>
+                        <span className={`font-medium ml-2 ${
+                          calculateResult.skippedOrders > 0 ? 'text-yellow-600' : 'text-gray-600'
+                        }`}>{calculateResult.skippedOrders}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">处理时间:</span>
+                        <span className="font-medium ml-2">{calculateResult.processingTime}</span>
+                      </div>
                     </div>
                   </div>
+
+                  {/* 详细的失败原因分析 */}
+                  {calculateResult.skippedOrders > 0 && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                      <h4 className="text-md font-medium text-red-800 mb-3">
+                        <AlertTriangle className="w-4 h-4 inline mr-2" />
+                        无法结算原因分析
+                      </h4>
+                      <div className="space-y-3 text-sm">
+                        <div className="bg-white rounded p-3">
+                          <h5 className="font-medium text-red-700 mb-2">主要问题：缺少价格或折扣信息</h5>
+                          <div className="space-y-1 text-red-600">
+                            <p>• <strong>单件价格为0</strong>：订单缺少unit_price信息 
+                              {calculateResult.failureReasons?.noPriceInfo > 0 && 
+                                <span className="ml-1 text-xs bg-red-100 px-1 rounded">({calculateResult.failureReasons.noPriceInfo}个)</span>
+                              }
+                            </p>
+                            <p>• <strong>折扣信息异常</strong>：discount值可能不正确
+                              {calculateResult.failureReasons?.noDiscountInfo > 0 && 
+                                <span className="ml-1 text-xs bg-red-100 px-1 rounded">({calculateResult.failureReasons.noDiscountInfo}个)</span>
+                              }
+                            </p>
+                            <p>• <strong>价格计算错误</strong>：其他价格计算问题
+                              {calculateResult.failureReasons?.priceCalculationError > 0 && 
+                                <span className="ml-1 text-xs bg-red-100 px-1 rounded">({calculateResult.failureReasons.priceCalculationError}个)</span>
+                              }
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="bg-blue-50 rounded p-3">
+                          <h5 className="font-medium text-blue-700 mb-2">解决方案：</h5>
+                          <div className="space-y-1 text-blue-600 text-xs">
+                            <p>1. <strong>检查SPU报价管理</strong>：确保相关产品的SPU已设置报价</p>
+                            <p>2. <strong>检查用户折扣规则</strong>：确保客户已配置折扣规则</p>
+                            <p>3. <strong>检查产品SKU映射</strong>：确保产品SKU正确映射到SPU</p>
+                            <p>4. <strong>重新导入订单数据</strong>：如果数据不完整，考虑重新导入</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {calculateResult.errors && calculateResult.errors.length > 0 && (
-                    <div className="mt-3">
-                      <p className="text-red-600 font-medium">错误信息:</p>
-                      <ul className="text-red-600 text-xs mt-1 space-y-1">
-                        {calculateResult.errors.map((error, index) => (
-                          <li key={index}>• {error}</li>
-                        ))}
-                      </ul>
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                      <p className="text-red-600 font-medium mb-2">详细错误信息:</p>
+                      <div className="max-h-32 overflow-y-auto">
+                        <ul className="text-red-600 text-xs space-y-1">
+                          {calculateResult.errors.slice(0, 10).map((error, index) => (
+                            <li key={index}>• {error}</li>
+                          ))}
+                          {calculateResult.errors.length > 10 && (
+                            <li className="text-red-500">... 还有 {calculateResult.errors.length - 10} 个错误</li>
+                          )}
+                        </ul>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -292,29 +386,48 @@ const SettlementPage = () => {
                   <div>
                     <h3 className="text-sm font-medium text-yellow-800">开始结算</h3>
                     <p className="text-sm text-yellow-700 mt-1">
-                      查看指定客户的结算订单，确认无异常后可执行结算收款。
+                      选择日期范围和指定客户查看结算订单，确认无异常后可执行结算收款。
                     </p>
                   </div>
                 </div>
               </div>
 
               <form onSubmit={handleGetSettlementOrders} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       <Calendar className="w-4 h-4 inline mr-1" />
-                      结算日期 *
+                      开始日期 *
                     </label>
                     <input
                       type="date"
-                      value={manageForm.settlementDate}
+                      value={manageForm.startDate}
                       onChange={(e) => setManageForm(prev => ({
                         ...prev,
-                        settlementDate: e.target.value
+                        startDate: e.target.value
                       }))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       required
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <Calendar className="w-4 h-4 inline mr-1" />
+                      结束日期 *
+                    </label>
+                    <input
+                      type="date"
+                      value={manageForm.endDate}
+                      max={getMaxDate()}
+                      onChange={(e) => setManageForm(prev => ({
+                        ...prev,
+                        endDate: e.target.value
+                      }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                    <p className="text-xs text-gray-500 mt-1">仅支持前一天的日期</p>
                   </div>
 
                   <div>
@@ -538,7 +651,9 @@ const SettlementPage = () => {
                             <td className="px-4 py-4 whitespace-nowrap">
                               <div className="text-sm">
                                 <div className="font-medium text-gray-900">客户ID: {record.dxm_client_id}</div>
-                                <div className="text-gray-500">结算日期: {record.settlement_date}</div>
+                                <div className="text-gray-500">
+                                  结算周期: {record.start_settlement_date} 至 {record.end_settlement_date}
+                                </div>
                               </div>
                             </td>
                             <td className="px-4 py-4 whitespace-nowrap">
@@ -604,7 +719,8 @@ const SettlementPage = () => {
               <h3 className="text-lg font-medium text-gray-900 mb-2">确认执行结算</h3>
               
               <div className="text-sm text-gray-600 space-y-2 mb-6">
-                <p>结算日期: <span className="font-medium">{manageForm.settlementDate}</span></p>
+                <p>开始日期: <span className="font-medium">{manageForm.startDate}</span></p>
+                <p>结束日期: <span className="font-medium">{manageForm.endDate}</span></p>
                 <p>客户ID: <span className="font-medium">{manageForm.dxm_client_id}</span></p>
                 <p>订单数量: <span className="font-medium">{ordersList.summary.calculatedOrders}</span></p>
                 <p>结算金额: <span className="font-medium text-green-600">¥{ordersList.summary.totalSettlementAmount}</span></p>

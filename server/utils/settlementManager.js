@@ -34,18 +34,19 @@ class SettlementManager {
   }
 
   /**
-   * 执行指定日期的订单结算
-   * @param {string} settlementDate - 结算日期 (YYYY-MM-DD)
+   * 执行指定日期范围的订单结算
+   * @param {string} startDate - 开始日期 (YYYY-MM-DD)
+   * @param {string} endDate - 结束日期 (YYYY-MM-DD)
    * @param {number} dxm_client_id - 可选的客户ID筛选
    * @returns {Object} 结算结果统计
    */
-  async settleOrdersByDate(settlementDate, dxm_client_id = null) {
+  async settleOrdersByDateRange(startDate, endDate, dxm_client_id = null) {
     const pool = await getConnection();
     const connection = await pool.getConnection();
-    const startTime = `${settlementDate} 00:00:00`;
-    const endTime = `${settlementDate} 23:59:59`;
+    const startTime = `${startDate} 00:00:00`;
+    const endTime = `${endDate} 23:59:59`;
     
-    console.log(`开始结算 ${settlementDate} 的订单...`);
+    console.log(`开始结算 ${startDate} 到 ${endDate} 的订单...`);
     
     try {
       await connection.beginTransaction();
@@ -110,6 +111,86 @@ class SettlementManager {
   }
 
   /**
+   * 执行指定日期的订单结算
+   * @param {string} settlementDate - 结算日期 (YYYY-MM-DD)
+   * @param {number} dxm_client_id - 可选的客户ID筛选
+   * @returns {Object} 结算结果统计
+   */
+  async settleOrdersByDate(settlementDate, dxm_client_id = null) {
+    const pool = await getConnection();
+    const connection = await pool.getConnection();
+    const startTime = `${settlementDate} 00:00:00`;
+    const endTime = `${settlementDate} 23:59:59`;
+    
+    console.log(`🚀 开始结算 ${settlementDate} 的订单...`);
+    
+    try {
+      await connection.beginTransaction();
+
+      const stats = {
+        processedOrders: 0,
+        settledOrders: 0,
+        cancelledOrders: 0,
+        errors: [],
+        userDiscounts: 0,
+        spuPrices: 0,
+        skippedOrders: 0
+      };
+
+      // 获取所有表的待结算订单
+      console.log(`🔍 开始查询待结算订单: ${startTime} 到 ${endTime}, 客户ID: ${dxm_client_id || '全部'}`);
+      const allOrders = await this.getPendingOrders(connection, startTime, endTime, dxm_client_id);
+      stats.processedOrders = allOrders.length;
+      console.log(`📊 找到待结算订单: ${allOrders.length} 个`);
+
+      if (allOrders.length === 0) {
+        console.log('❌ 没有找到待结算的订单');
+        await connection.commit();
+        return stats;
+      }
+
+      // 步骤0: 检查并处理需要取消结算的订单
+      console.log(`🚫 步骤0: 检查并处理需要取消结算的订单...`);
+      await this.processCancelledOrders(connection, allOrders, stats);
+      console.log(`🚫 步骤0完成: 取消订单 ${stats.cancelledOrders} 个`);
+
+      // 过滤掉已取消的订单，只处理正常订单
+      const normalOrders = allOrders.filter(order => order.settlement_status !== 'cancel');
+      console.log(`🔍 过滤后待处理订单: ${normalOrders.length} (原始: ${allOrders.length}, 已取消: ${allOrders.length - normalOrders.length})`);
+
+      if (normalOrders.length === 0) {
+        console.log('所有订单都已取消，无需进行结算计算');
+        await connection.commit();
+        return stats;
+      }
+
+      // 步骤1: SKU->SPU映射
+      await this.mapSkuToSpu(connection, normalOrders, stats);
+
+      // 步骤2-4: 用户级折扣计算
+      await this.calculateUserDiscounts(connection, normalOrders, startTime, endTime, stats);
+
+      // 步骤5: 客户专属SPU价格查询和更新
+      await this.updateSpuPrices(connection, normalOrders, stats);
+
+      // 步骤6: 最终结算金额计算
+      await this.calculateFinalSettlement(connection, normalOrders, stats);
+
+      await connection.commit();
+      console.log(`结算完成！处理订单: ${stats.processedOrders}, 成功结算: ${stats.settledOrders}`);
+      
+      return stats;
+
+    } catch (error) {
+      await connection.rollback();
+      console.error('结算过程中发生错误:', error);
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
+  /**
    * 获取所有分表中的待结算订单
    * @param {Object} connection - 数据库连接
    * @param {string} startTime - 开始时间
@@ -120,6 +201,7 @@ class SettlementManager {
   async getPendingOrders(connection, startTime, endTime, dxm_client_id = null) {
     const allOrders = [];
     const tables = this.getAllOrderTableNames();
+    console.log(`🔍 开始查询 ${tables.length} 个分表的待结算订单...`);
 
     for (const tableName of tables) {
       try {
@@ -142,7 +224,9 @@ class SettlementManager {
         
         query += ` ORDER BY dxm_client_id, buyer_name, payment_time`;
         
+        console.log(`📋 查询表 ${tableName}, 参数: [${params.join(', ')}]`);
         const [rows] = await connection.execute(query, params);
+        console.log(`📋 表 ${tableName} 找到 ${rows.length} 个待结算订单`);
 
         // 为每个订单添加表名信息
         const ordersWithTable = rows.map(order => ({
@@ -152,7 +236,7 @@ class SettlementManager {
 
         allOrders.push(...ordersWithTable);
       } catch (error) {
-        console.warn(`查询表 ${tableName} 时出错:`, error.message);
+        console.warn(`❌ 查询表 ${tableName} 时出错:`, error.message);
       }
     }
 
@@ -447,9 +531,12 @@ class SettlementManager {
    * @param {Object} stats - 统计信息
    */
   async calculateFinalSettlement(connection, orders, stats) {
+    console.log(`🧮 开始计算 ${orders.length} 个订单的最终结算金额...`);
+    
     for (const order of orders) {
       // 跳过未找到价格的订单
       if (order._noPriceFound) {
+        console.log(`⏭️ 跳过订单 ${order.dxm_order_id}: 未找到价格`);
         stats.skippedOrders++;
         continue;
       }
@@ -458,27 +545,45 @@ class SettlementManager {
         let settlementAmount = 0;
         let settlementRemark = '';
 
+        console.log(`🔍 处理订单 ${order.dxm_order_id}: multi_total_price=${order.multi_total_price}, unit_price=${order.unit_price}, discount=${order.discount}`);
+
         if (order.multi_total_price && order.multi_total_price > 0) {
           // 使用多件商品专属价格
           settlementAmount = order.multi_total_price;
           settlementRemark = `多件价格结算: ${order.multi_total_price}`;
+          console.log(`💰 订单 ${order.dxm_order_id} 使用多件价格: ${settlementAmount}`);
         } else if (order.unit_price && order.unit_price > 0 && order.discount) {
           // 使用单件价格 × 用户折扣
           settlementAmount = order.unit_price * order.discount;
           settlementRemark = `单件价格×用户折扣结算: ${order.unit_price} × ${order.discount} = ${settlementAmount.toFixed(2)}`;
+          console.log(`💰 订单 ${order.dxm_order_id} 使用单件价格×折扣: ${settlementAmount}`);
         } else {
           // 无法计算结算金额，保持waiting状态
+          let reason = '';
+          if (!order.unit_price || order.unit_price <= 0) {
+            reason = '缺少单件价格信息';
+            if (stats.failureReasons) stats.failureReasons.noPriceInfo++;
+          } else if (!order.discount || order.discount <= 0) {
+            reason = '缺少折扣信息';
+            if (stats.failureReasons) stats.failureReasons.noDiscountInfo++;
+          } else {
+            reason = '价格计算异常';
+            if (stats.failureReasons) stats.failureReasons.priceCalculationError++;
+          }
+          
+          console.log(`❌ 订单 ${order.dxm_order_id} ${reason}，无法结算`);
           await connection.execute(`
             UPDATE ${order._tableName} 
-            SET settle_remark = '缺少价格或折扣信息，无法结算' 
+            SET settle_remark = ? 
             WHERE id = ?
-          `, [order.id]);
+          `, [reason, order.id]);
           
           stats.skippedOrders++;
           continue;
         }
 
         // 更新最终结算信息
+        console.log(`💾 更新订单 ${order.dxm_order_id} 结算状态为 calculated, 金额: ${settlementAmount}`);
         await connection.execute(`
           UPDATE ${order._tableName} 
           SET settlement_amount = ?,
@@ -489,11 +594,14 @@ class SettlementManager {
         `, [settlementAmount, settlementRemark, order.id]);
 
         stats.settledOrders++;
+        console.log(`✅ 订单 ${order.dxm_order_id} 结算成功`);
       } catch (error) {
-        console.error(`计算订单 ${order.id} 最终结算金额时出错:`, error);
+        console.error(`❌ 计算订单 ${order.id} 最终结算金额时出错:`, error);
         stats.errors.push(`最终结算计算错误: ${order.id} - ${error.message}`);
       }
     }
+    
+    console.log(`🧮 最终结算计算完成: 成功 ${stats.settledOrders} 个, 跳过 ${stats.skippedOrders} 个`);
   }
 
   /**

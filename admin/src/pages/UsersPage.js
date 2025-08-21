@@ -430,6 +430,9 @@ const UsersPage = () => {
                       用户信息
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                      来自邀请人
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                       钱包余额
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
@@ -460,8 +463,28 @@ const UsersPage = () => {
                               {user.name || '未设置姓名'}
                             </div>
                             <div className="text-sm text-slate-500">{user.email}</div>
+                            <div className="text-xs text-slate-400">ID: {user.id}</div>
                           </div>
                         </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {user.referrer_id ? (
+                          <div className="text-sm">
+                            <div className="font-medium text-slate-900">
+                              {user.referrer_name || '未设置姓名'}
+                            </div>
+                            <div className="text-slate-500">
+                              ID: {user.referrer_id}
+                            </div>
+                            <div className="text-slate-500 text-xs">
+                              {user.referrer_email}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-sm text-slate-400">
+                            自主注册
+                          </div>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-slate-900">
