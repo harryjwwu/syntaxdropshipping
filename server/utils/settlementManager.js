@@ -128,7 +128,7 @@ class SettlementManager {
                  product_count, buyer_name, product_name, payment_time,
                  product_sku, product_spu, unit_price, multi_total_price,
                  discount, settlement_amount, settlement_status, order_status,
-                 customer_remark, picking_remark, order_remark, settle_remark
+                 remark, settle_remark
           FROM ${tableName}
           WHERE payment_time BETWEEN ? AND ?
             AND settlement_status = 'waiting'`;
@@ -224,17 +224,36 @@ class SettlementManager {
    * @returns {boolean} 是否包含不结算标记
    */
   checkRemarkContainsNoSettlement(order) {
-    // 检查三个备注字段：客服备注、拣货备注、订单备注
+    // 检查备注字段（remark是JSON格式，包含customer_remark、picking_remark、order_remark）
     const remarksToCheck = [
-      order.customer_remark,
-      order.picking_remark,
-      order.order_remark,
-      order.settle_remark  // 也检查结算备注
+      order.remark,
+      order.settle_remark
     ];
     
     for (const remark of remarksToCheck) {
       if (remark && typeof remark === 'string' && remark.includes('不结算')) {
         return true;
+      }
+      
+      // 如果remark是JSON字符串，尝试解析
+      if (remark && typeof remark === 'string' && (remark.startsWith('{') || remark.startsWith('['))) {
+        try {
+          const remarkObj = JSON.parse(remark);
+          if (typeof remarkObj === 'object') {
+            const allRemarks = [
+              remarkObj.customer_remark,
+              remarkObj.picking_remark,
+              remarkObj.order_remark
+            ].filter(Boolean).join(' ');
+            
+            if (allRemarks.includes('不结算')) {
+              return true;
+            }
+          }
+        } catch (error) {
+          // 如果不是有效JSON，继续检查原始字符串
+          continue;
+        }
       }
     }
     
