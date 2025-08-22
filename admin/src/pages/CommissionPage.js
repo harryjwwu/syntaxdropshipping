@@ -256,7 +256,7 @@ const CommissionPage = () => {
               <CheckCircle className="h-8 w-8 text-green-500" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-slate-600">已审核</p>
+              <p className="text-sm font-medium text-slate-600">已通过</p>
               <p className="text-2xl font-bold text-slate-900">{stats.approved_commissions}</p>
               <p className="text-xs text-slate-500">¥{formatAmount(stats.approved_amount)}</p>
             </div>
