@@ -501,64 +501,96 @@ const CommissionPage = () => {
               <div>
                 <h3 className="text-lg font-medium text-gray-900 mb-6">Commission Records</h3>
                 <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Order Info
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Order Amount
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Commission Amount
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Status
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Time
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {records.map((record) => (
-                        <tr key={record.id}>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div>
-                              <div className="text-sm font-medium text-gray-900">
-                                #{record.order_number}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                来自: {record.referee_name}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {formatCurrency(record.order_amount)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                            {formatCurrency(record.commission_amount)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`text-sm ${getStatusColor(record.status)}`}>
-                              {getStatusText(record.status)}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {formatDate(record.created_at)}
-                          </td>
-                        </tr>
-                      ))}
-                      {records.length === 0 && (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
                         <tr>
-                          <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
-                            No commission records yet
-                          </td>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            记录信息
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            结算信息
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            被推荐人信息
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            佣金信息
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            状态信息
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            时间信息
+                          </th>
                         </tr>
-                      )}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {records.map((record) => (
+                          <tr key={record.id} className="hover:bg-gray-50">
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              <div className="text-sm">
+                                <div className="font-medium text-gray-900">ID: {record.id}</div>
+                                <div className="text-gray-500">推荐人ID: {record.referrer_id}</div>
+                                <div className="text-gray-500">被推荐人ID: {record.referee_id}</div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              <div className="text-sm">
+                                <div className="font-medium text-gray-900">#{record.settlement_id}</div>
+                                <div className="text-gray-500">结算金额: {formatCurrency(record.settlement_amount)}</div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              <div className="text-sm">
+                                <div className="font-medium text-gray-900">{record.referee_name}</div>
+                                <div className="text-gray-500">{record.referee_email}</div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              <div className="text-sm">
+                                <div className="font-medium text-green-600">{formatCurrency(record.commission_amount)}</div>
+                                <div className="text-gray-500">比例: {(parseFloat(record.commission_rate) * 100).toFixed(2)}%</div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              <div className="text-sm">
+                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                  record.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                  record.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-red-100 text-red-800'
+                                }`}>
+                                  {record.status === 'approved' ? '已通过' :
+                                   record.status === 'pending' ? '待审核' : '已拒绝'}
+                                </span>
+                                {record.admin_id && (
+                                  <div className="text-gray-500 mt-1">审核人ID: {record.admin_id}</div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              <div className="text-sm">
+                                <div className="text-gray-900">创建: {formatDate(record.created_at)}</div>
+                                {record.approved_at && (
+                                  <div className="text-green-600">通过: {formatDate(record.approved_at)}</div>
+                                )}
+                                {record.updated_at && record.updated_at !== record.created_at && (
+                                  <div className="text-gray-500">更新: {formatDate(record.updated_at)}</div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                        {records.length === 0 && (
+                          <tr>
+                            <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                              暂无佣金记录
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}
