@@ -48,7 +48,7 @@ const Navbar = () => {
   const navItems = [
     { path: '/', label: t('nav.home') },
     { path: '/services', label: t('nav.services') },
-    ...(isAuthenticated ? [{ path: '/commission', label: t('nav.commission') }] : []),
+    ...(isAuthenticated ? [{ path: '/affiliate', label: t('nav.commission') }] : []),
     { path: '/contact', label: t('nav.contact') }
   ];
 

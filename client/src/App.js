@@ -16,7 +16,7 @@ import RegisterPage from './pages/RegisterPage';
 import ServicesPage from './pages/ServicesPage';
 import ContactPage from './pages/ContactPage';
 import ProfilePage from './pages/ProfilePage';
-import CommissionPage from './pages/CommissionPage';
+
 
 // Dashboard Pages
 import DashboardPage from './pages/DashboardPage';
@@ -151,14 +151,8 @@ function App() {
                 </DashboardLayout>
               } />
 
-              {/* Legacy routes for backward compatibility */}
-              <Route path="/commission" element={
-                <>
-                  <Navbar />
-                  <CommissionPage />
-                  <Footer />
-                </>
-              } />
+              {/* Redirect legacy commission route to affiliate */}
+              <Route path="/commission" element={<Navigate to="/affiliate" replace />} />
             </Routes>
           </main>
         </div>
