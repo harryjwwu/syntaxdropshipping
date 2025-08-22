@@ -129,7 +129,7 @@ const CommissionPage = () => {
   const getStatusBadge = (status) => {
     const statusConfigs = {
       pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: '待审核' },
-      approved: { bg: 'bg-green-100', text: 'text-green-800', label: '已审核' },
+      approved: { bg: 'bg-green-100', text: 'text-green-800', label: '已通过' },
       rejected: { bg: 'bg-red-100', text: 'text-red-800', label: '已拒绝' }
     };
     
@@ -209,7 +209,7 @@ const CommissionPage = () => {
                 statusFilter === 'approved' ? 'bg-primary-500 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
             >
-              已审核
+              已通过
             </button>
             <button
               onClick={() => handleStatusFilter('rejected')}
