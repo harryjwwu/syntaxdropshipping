@@ -217,8 +217,8 @@ async function addCommissionToUserBalance(connection, commission) {
       // 创建新的佣金账户
       await connection.execute(`
         INSERT INTO commission_accounts 
-        (user_id, total_earned, available_balance, frozen_balance, total_withdrawn, total_referrals)
-        VALUES (?, ?, ?, 0, 0, 0)
+        (user_id, total_earned, available_balance, frozen_balance, total_withdrawn)
+        VALUES (?, ?, ?, 0, 0)
       `, [commission.referrer_id, commission.commission_amount, commission.commission_amount]);
       
       console.log(`✅ 为用户 ${commission.referrer_id} 创建佣金账户并添加余额 ¥${commission.commission_amount}`);

@@ -134,14 +134,7 @@ class CommissionManager {
         // 创建或更新推荐人的佣金账户
         await this.ensureCommissionAccount(referrerId);
 
-        // 更新推荐人的推荐统计
-        await db.execute(
-          `UPDATE commission_accounts 
-           SET total_referrals = total_referrals + 1, 
-               active_referrals = active_referrals + 1 
-           WHERE user_id = ?`,
-          [referrerId]
-        );
+        // 推荐统计已简化，直接从users表查询，无需在此更新
 
         await db.query('COMMIT');
         return true;

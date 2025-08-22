@@ -225,9 +225,9 @@ const AffiliatePage = () => {
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Active Referrals</dt>
+                    <dt className="text-sm font-medium text-gray-500 truncate">Referrals</dt>
                     <dd className="text-lg font-medium text-gray-900">
-                      {commissionAccount.active_referrals || 0}
+                      {referralStats?.referrals?.length || 0}
                     </dd>
                   </dl>
                 </div>
