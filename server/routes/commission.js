@@ -203,15 +203,35 @@ router.put('/:id/review', authenticateAdmin, async (req, res) => {
  */
 async function addCommissionToUserBalance(connection, commission) {
   try {
-    // 这里可以添加到用户的佣金余额表
-    // 暂时只记录日志，明天实现具体的余额管理
     console.log(`💰 佣金 ¥${commission.commission_amount} 将添加到用户 ${commission.referrer_id} 的余额`);
     
-    // TODO: 明天实现用户佣金余额管理
-    // await connection.execute(`
-    //   INSERT INTO user_commission_balance (user_id, amount, source_type, source_id, description)
-    //   VALUES (?, ?, 'commission', ?, ?)
-    // `, [commission.referrer_id, commission.commission_amount, commission.id, `结算佣金: ${commission.settlement_id}`]);
+    // 检查用户是否已有佣金账户，如果没有则创建
+    const [existingAccount] = await connection.execute(
+      'SELECT * FROM commission_accounts WHERE user_id = ?',
+      [commission.referrer_id]
+    );
+    
+    if (existingAccount.length === 0) {
+      // 创建新的佣金账户
+      await connection.execute(`
+        INSERT INTO commission_accounts 
+        (user_id, total_earned, available_balance, frozen_balance, total_withdrawn, total_referrals)
+        VALUES (?, ?, ?, 0, 0, 0)
+      `, [commission.referrer_id, commission.commission_amount, commission.commission_amount]);
+      
+      console.log(`✅ 为用户 ${commission.referrer_id} 创建佣金账户并添加余额 ¥${commission.commission_amount}`);
+    } else {
+      // 更新现有佣金账户
+      await connection.execute(`
+        UPDATE commission_accounts 
+        SET total_earned = total_earned + ?,
+            available_balance = available_balance + ?,
+            last_commission_at = CURRENT_TIMESTAMP
+        WHERE user_id = ?
+      `, [commission.commission_amount, commission.commission_amount, commission.referrer_id]);
+      
+      console.log(`✅ 用户 ${commission.referrer_id} 佣金账户余额已增加 ¥${commission.commission_amount}`);
+    }
     
   } catch (error) {
     console.error('添加佣金到用户余额失败:', error);
