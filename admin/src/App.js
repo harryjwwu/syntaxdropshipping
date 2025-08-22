@@ -19,6 +19,7 @@ import SPUPriceHistoryPage from './pages/SPUPriceHistoryPage';
 import OrdersPage from './pages/OrdersPage';
 import SettlementPage from './pages/SettlementPage';
 import SettlementDetailPage from './pages/SettlementDetailPage';
+import CommissionPage from './pages/CommissionPage';
 
 function App() {
   return (
@@ -48,6 +49,7 @@ function App() {
               <Route path="orders" element={<OrdersPage />} />
               <Route path="settlement" element={<SettlementPage />} />
               <Route path="settlement/records/:recordId" element={<SettlementDetailPage />} />
+              <Route path="commission" element={<CommissionPage />} />
               <Route path="deposits" element={<DepositsPage />} />
               <Route path="users" element={<UsersPage />} />
               <Route path="users/:id" element={<UserDetailPage />} />

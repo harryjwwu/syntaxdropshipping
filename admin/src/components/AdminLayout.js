@@ -13,7 +13,8 @@ import {
   Package,
   DollarSign,
   ShoppingCart,
-  Calculator
+  Calculator,
+  Percent
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -52,6 +53,12 @@ const AdminLayout = () => {
       name: '结算管理',
       href: '/settlement',
       icon: Calculator,
+      permission: 'system'
+    },
+    {
+      name: '佣金管理',
+      href: '/commission',
+      icon: Percent,
       permission: 'system'
     },
     {

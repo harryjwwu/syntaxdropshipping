@@ -349,6 +349,9 @@ router.post('/execute', authenticateAdmin, async (req, res) => {
 
       await connection.commit();
 
+      // 检查是否需要创建佣金记录
+      await createCommissionRecord(connection, settlementRecordId, dxm_client_id, totalSettlementAmount);
+
       console.log(`管理员 ${req.admin.email} 完成结算: ${settlementRecordId}, 客户: ${dxm_client_id}, 金额: ${totalSettlementAmount}`);
 
       res.json({
@@ -702,12 +705,24 @@ router.get('/records/:id', authenticateAdmin, async (req, res) => {
       }
     }
 
+    // 获取该结算记录的佣金信息
+    const [commissionInfo] = await pool.execute(`
+      SELECT cr.*, 
+             u1.name as referrer_name, u1.email as referrer_email,
+             u2.name as referee_name, u2.email as referee_email
+      FROM commission_records cr
+      LEFT JOIN users u1 ON cr.referrer_id = u1.id
+      LEFT JOIN users u2 ON cr.referee_id = u2.id
+      WHERE cr.settlement_id = ?
+    `, [id]);
+
     res.json({
       success: true,
       data: {
         record,
         orders: allOrders,
-        orderCount: allOrders.length
+        orderCount: allOrders.length,
+        commission: commissionInfo.length > 0 ? commissionInfo[0] : null
       }
     });
 
@@ -781,5 +796,61 @@ router.post('/cancel', authenticateAdmin, async (req, res) => {
     }
   }
 });
+
+/**
+ * 创建佣金记录
+ * @param {Object} connection - 数据库连接
+ * @param {string} settlementId - 结算记录ID
+ * @param {number} dxmClientId - 店小秘客户ID
+ * @param {number} settlementAmount - 结算金额
+ */
+async function createCommissionRecord(connection, settlementId, dxmClientId, settlementAmount) {
+  try {
+    console.log(`🔍 检查客户 ${dxmClientId} 是否有佣金受益人...`);
+    
+    // 查找该客户对应的用户和邀请人
+    const [userInfo] = await connection.execute(`
+      SELECT u1.id as referee_id, u1.name as referee_name, u1.email as referee_email,
+             u1.referred_by as referrer_id,
+             u2.id as referrer_user_id, u2.name as referrer_name, u2.email as referrer_email
+      FROM users u1
+      LEFT JOIN users u2 ON u1.referred_by = u2.id
+      WHERE u1.dxm_client_id = ? AND u1.referred_by IS NOT NULL
+    `, [dxmClientId]);
+    
+    if (userInfo.length === 0) {
+      console.log(`ℹ️ 客户 ${dxmClientId} 没有佣金受益人，跳过佣金记录创建`);
+      return;
+    }
+    
+    const user = userInfo[0];
+    console.log(`💰 发现佣金受益人: ${user.referrer_name} (ID: ${user.referrer_id})`);
+    
+    // 获取佣金比例（默认2%）
+    const commissionRate = 0.02; // 可以从系统设置中获取
+    const commissionAmount = settlementAmount * commissionRate;
+    
+    // 创建佣金记录
+    await connection.execute(`
+      INSERT INTO commission_records 
+      (settlement_id, referrer_id, referee_id, settlement_amount, commission_amount, commission_rate, status, notes)
+      VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)
+    `, [
+      settlementId, 
+      user.referrer_id, 
+      user.referee_id, 
+      settlementAmount, 
+      commissionAmount, 
+      commissionRate,
+      `基于结算 ${settlementId} 自动生成，邀请人: ${user.referrer_name}, 被邀请人: ${user.referee_name}`
+    ]);
+    
+    console.log(`✅ 佣金记录已创建: 邀请人 ${user.referrer_name} 获得 $${commissionAmount.toFixed(2)} 佣金 (${(commissionRate * 100).toFixed(1)}%)`);
+    
+  } catch (error) {
+    console.error(`❌ 创建佣金记录失败:`, error);
+    // 不抛出错误，避免影响结算流程
+  }
+}
 
 module.exports = router;

@@ -312,7 +312,17 @@ export const adminAPI = {
   getSettlementRecords: (params = {}) => api.get('/admin/settlement/records', { params }),
   
   // 获取结算记录详情
-  getSettlementRecordDetail: (recordId) => api.get(`/admin/settlement/records/${recordId}`)
+  getSettlementRecordDetail: (recordId) => api.get(`/admin/settlement/records/${recordId}`),
+
+  // ==================== 佣金管理 API ====================
+  // 获取佣金记录列表
+  getCommissions: (params = {}) => api.get('/admin/commissions', { params }),
+  
+  // 审核佣金记录
+  reviewCommission: (id, reviewData) => api.put(`/admin/commissions/${id}/review`, reviewData),
+  
+  // 获取佣金统计
+  getCommissionStats: () => api.get('/admin/commissions/stats')
 };
 
 // 工具函数

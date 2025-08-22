@@ -20,6 +20,7 @@ const SettlementDetailPage = () => {
   const [settlementRecord, setSettlementRecord] = useState(null);
   const [orders, setOrders] = useState([]);
   const [allOrders, setAllOrders] = useState([]);
+  const [commission, setCommission] = useState(null);
   const [error, setError] = useState(null);
   
   // 分页状态
@@ -38,6 +39,7 @@ const SettlementDetailPage = () => {
     try {
       const response = await adminAPI.getSettlementRecordDetail(recordId);
       setSettlementRecord(response.data.record);
+      setCommission(response.data.commission);
       const allOrdersData = response.data.orders || [];
       setAllOrders(allOrdersData);
       setTotalOrders(allOrdersData.length);
@@ -283,6 +285,48 @@ const SettlementDetailPage = () => {
               <div className="text-sm text-gray-600">商品总数量</div>
             </div>
           </div>
+          
+          {/* 佣金信息 */}
+          {commission && (
+            <div className="mt-6 bg-orange-50 border border-orange-200 rounded-lg p-4">
+              <h3 className="text-lg font-medium text-orange-800 mb-4">💰 佣金信息</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-600">邀请人:</span>
+                  <div className="font-medium text-gray-900">{commission.referrer_name}</div>
+                  <div className="text-gray-500 text-xs">{commission.referrer_email}</div>
+                </div>
+                <div>
+                  <span className="text-gray-600">佣金金额:</span>
+                  <div className="font-bold text-orange-600 text-lg">
+                    ¥{parseFloat(commission.commission_amount || 0).toFixed(2)}
+                  </div>
+                  <div className="text-gray-500 text-xs">
+                    比例: {(parseFloat(commission.commission_rate || 0) * 100).toFixed(1)}%
+                  </div>
+                </div>
+                <div>
+                  <span className="text-gray-600">状态:</span>
+                  <div className="mt-1">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      commission.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                      commission.status === 'approved' ? 'bg-green-100 text-green-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {commission.status === 'pending' && '待审核'}
+                      {commission.status === 'approved' && '已审核'}
+                      {commission.status === 'rejected' && '已拒绝'}
+                    </span>
+                    {commission.status === 'rejected' && commission.reject_reason && (
+                      <div className="mt-1 text-xs text-red-600">
+                        拒绝原因: {commission.reject_reason}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

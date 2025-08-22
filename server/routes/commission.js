@@ -1,586 +1,222 @@
 const express = require('express');
 const router = express.Router();
-const commissionManager = require('../utils/commissionManager');
-const { authenticateToken: auth, requireAdmin } = require('../middleware/auth');
+const { authenticateAdmin } = require('../middleware/adminAuth');
 const { getConnection } = require('../config/database');
 
-// 获取用户的推荐码
-router.get('/referral-code', auth, async (req, res) => {
+/**
+ * 获取佣金记录列表
+ * GET /api/admin/commissions
+ */
+router.get('/', authenticateAdmin, async (req, res) => {
   try {
-    const userId = req.user.id;
-    const referralCode = await commissionManager.createReferralCodeForUser(userId);
-    
-    res.json({
-      success: true,
-      data: {
-        referralCode,
-        referralLink: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/register?ref=${referralCode}`
-      }
-    });
-  } catch (error) {
-    console.error('Error getting referral code:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get referral code'
-    });
-  }
-});
+    const { 
+      page = 1, 
+      limit = 20, 
+      status = '', 
+      search = ''
+    } = req.query;
 
-// 获取用户的佣金账户信息
-router.get('/account', auth, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const account = await commissionManager.getUserCommissionAccount(userId);
-    
-    res.json({
-      success: true,
-      data: account
-    });
-  } catch (error) {
-    console.error('Error getting commission account:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get commission account'
-    });
-  }
-});
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 20;
+    const offset = (pageNum - 1) * limitNum;
+    const connection = await getConnection();
 
-// 获取用户的佣金记录
-router.get('/records', auth, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
-    const offset = (page - 1) * limit;
+    // 构建查询条件
+    let whereConditions = [];
+    let queryParams = [];
 
-    const records = await commissionManager.getUserCommissionRecords(userId, limit, offset);
-    
-    // 获取总记录数
-    const db = await getConnection();
-    const [totalCount] = await db.execute(
-      'SELECT COUNT(*) as total FROM commission_records WHERE referrer_id = ?',
-      [userId]
-    );
-
-    res.json({
-      success: true,
-      data: {
-        records,
-        pagination: {
-          page,
-          limit,
-          total: totalCount[0].total,
-          totalPages: Math.ceil(totalCount[0].total / limit)
-        }
-      }
-    });
-  } catch (error) {
-    console.error('Error getting commission records:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get commission records'
-    });
-  }
-});
-
-// 获取用户的推荐统计
-router.get('/referral-stats', auth, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const stats = await commissionManager.getUserReferralStats(userId);
-    
-    res.json({
-      success: true,
-      data: stats
-    });
-  } catch (error) {
-    console.error('Error getting referral stats:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get referral stats'
-    });
-  }
-});
-
-// 申请提现
-router.post('/withdrawal', auth, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { amount, method, accountInfo } = req.body;
-
-    // 验证输入
-    if (!amount || amount <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid withdrawal amount'
-      });
+    if (status) {
+      whereConditions.push('cr.status = ?');
+      queryParams.push(status);
     }
 
-    if (!method || !['bank_transfer', 'paypal', 'alipay', 'wechat'].includes(method)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid withdrawal method'
-      });
+    if (search) {
+      whereConditions.push('(u1.name LIKE ? OR u1.email LIKE ? OR u2.name LIKE ? OR u2.email LIKE ?)');
+      const searchPattern = `%${search}%`;
+      queryParams.push(searchPattern, searchPattern, searchPattern, searchPattern);
     }
 
-    if (!accountInfo || Object.keys(accountInfo).length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Account information is required'
-      });
-    }
+    const whereClause = whereConditions.length > 0 
+      ? `WHERE ${whereConditions.join(' AND ')}` 
+      : '';
 
-    // 获取用户佣金账户
-    const account = await commissionManager.getUserCommissionAccount(userId);
-    if (!account) {
-      return res.status(404).json({
-        success: false,
-        message: 'Commission account not found'
-      });
-    }
-
-    // 检查余额是否足够
-    if (parseFloat(account.available_balance) < parseFloat(amount)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Insufficient balance'
-      });
-    }
-
-    // 获取最小提现金额设置
-    const [minAmountResult] = await db.execute(
-      'SELECT setting_value FROM commission_settings WHERE setting_name = ? AND is_active = 1',
-      ['min_withdrawal_amount']
-    );
-    const minAmount = minAmountResult.length > 0 ? parseFloat(minAmountResult[0].setting_value) : 10.00;
-
-    if (parseFloat(amount) < minAmount) {
-      return res.status(400).json({
-        success: false,
-        message: `Minimum withdrawal amount is $${minAmount}`
-      });
-    }
-
-    // 获取最大提现金额设置
-    const [maxAmountResult] = await db.execute(
-      'SELECT setting_value FROM commission_settings WHERE setting_name = ? AND is_active = 1',
-      ['max_withdrawal_amount']
-    );
-    const maxAmount = maxAmountResult.length > 0 ? parseFloat(maxAmountResult[0].setting_value) : 10000.00;
-
-    if (parseFloat(amount) > maxAmount) {
-      return res.status(400).json({
-        success: false,
-        message: `Maximum withdrawal amount is $${maxAmount}`
-      });
-    }
-
-    // 获取手续费比例
-    const [feeRateResult] = await db.execute(
-      'SELECT setting_value FROM commission_settings WHERE setting_name = ? AND is_active = 1',
-      ['withdrawal_fee_rate']
-    );
-    const feeRate = feeRateResult.length > 0 ? parseFloat(feeRateResult[0].setting_value) : 0;
-
-    const fee = (parseFloat(amount) * feeRate).toFixed(2);
-    const actualAmount = (parseFloat(amount) - parseFloat(fee)).toFixed(2);
-
-    // 生成提现单号
-    const withdrawalNumber = `WD${Date.now()}${userId}`;
-
-    // 开始事务
-    await db.execute('START TRANSACTION');
-
-    try {
-      // 创建提现记录
-      const [result] = await db.execute(
-        `INSERT INTO commission_withdrawals 
-         (user_id, withdrawal_number, amount, fee, actual_amount, method, account_info, status) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`,
-        [userId, withdrawalNumber, amount, fee, actualAmount, method, JSON.stringify(accountInfo)]
-      );
-
-      // 更新用户佣金账户（冻结提现金额）
-      await db.execute(
-        `UPDATE commission_accounts 
-         SET available_balance = available_balance - ?, 
-             frozen_balance = frozen_balance + ? 
-         WHERE user_id = ?`,
-        [amount, amount, userId]
-      );
-
-      await db.execute('COMMIT');
-
-      res.json({
-        success: true,
-        data: {
-          withdrawalId: result.insertId,
-          withdrawalNumber,
-          amount,
-          fee,
-          actualAmount,
-          status: 'pending'
-        },
-        message: 'Withdrawal request submitted successfully'
-      });
-    } catch (error) {
-      await db.execute('ROLLBACK');
-      throw error;
-    }
-  } catch (error) {
-    console.error('Error processing withdrawal:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to process withdrawal request'
-    });
-  }
-});
-
-// 获取提现记录
-router.get('/withdrawals', auth, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
-    const offset = (page - 1) * limit;
-
-    const db = await getConnection();
-    const [withdrawals] = await db.execute(
-      `SELECT id, withdrawal_number, amount, fee, actual_amount, method, 
-              status, applied_at, processed_at, completed_at, admin_notes
-       FROM commission_withdrawals 
-       WHERE user_id = ? 
-       ORDER BY applied_at DESC 
-       LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}`,
-      [userId]
-    );
-
-    // 获取总记录数
-    const [totalCount] = await db.execute(
-      'SELECT COUNT(*) as total FROM commission_withdrawals WHERE user_id = ?',
-      [userId]
-    );
-
-    res.json({
-      success: true,
-      data: {
-        withdrawals,
-        pagination: {
-          page,
-          limit,
-          total: totalCount[0].total,
-          totalPages: Math.ceil(totalCount[0].total / limit)
-        }
-      }
-    });
-  } catch (error) {
-    console.error('Error getting withdrawals:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get withdrawal records'
-    });
-  }
-});
-
-// 验证推荐码（注册时使用）
-router.post('/validate-referral', async (req, res) => {
-  try {
-    const { referralCode } = req.body;
-
-    if (!referralCode) {
-      return res.status(400).json({
-        success: false,
-        message: 'Referral code is required'
-      });
-    }
-
-    // 查找推荐人
-    const [referrer] = await db.execute(
-      `SELECT u.id, u.name, u.email 
-       FROM users u 
-       WHERE u.referral_code = ? AND u.is_active = 1`,
-      [referralCode]
-    );
-
-    if (referrer.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Invalid referral code'
-      });
-    }
-
-    res.json({
-      success: true,
-      data: {
-        referrer: {
-          id: referrer[0].id,
-          name: referrer[0].name,
-          email: referrer[0].email
-        }
-      },
-      message: 'Valid referral code'
-    });
-  } catch (error) {
-    console.error('Error validating referral code:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to validate referral code'
-    });
-  }
-});
-
-// 管理员路由 - 获取所有佣金记录
-router.get('/admin/records', auth, async (req, res) => {
-  try {
-    // 检查管理员权限
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({
-        success: false,
-        message: 'Admin access required'
-      });
-    }
-
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
-    const offset = (page - 1) * limit;
-    const status = req.query.status;
-
-    let query = `
-      SELECT cr.*, 
-             referrer.name as referrer_name, referrer.email as referrer_email,
-             referee.name as referee_name, referee.email as referee_email,
-             o.order_number, o.created_at as order_date
+    // 获取佣金记录列表
+    const query = `
+      SELECT 
+        cr.*,
+        u1.name as referrer_name,
+        u1.email as referrer_email,
+        u2.name as referee_name,
+        u2.email as referee_email,
+        u2.dxm_client_id,
+        a.name as admin_name
       FROM commission_records cr
-      LEFT JOIN users referrer ON cr.referrer_id = referrer.id
-      LEFT JOIN users referee ON cr.referee_id = referee.id
-      LEFT JOIN orders o ON cr.order_id = o.id
+      LEFT JOIN users u1 ON cr.referrer_id = u1.id
+      LEFT JOIN users u2 ON cr.referee_id = u2.id
+      LEFT JOIN admins a ON cr.admin_id = a.id
+      ${whereClause}
+      ORDER BY cr.created_at DESC
+      LIMIT ${limitNum} OFFSET ${offset}
     `;
 
-    const params = [];
-
-    if (status) {
-      query += ' WHERE cr.status = ?';
-      params.push(status);
-    }
-
-    query += ` ORDER BY cr.created_at DESC LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}`;
-
-    const [records] = await db.execute(query, params);
+    const [commissions] = await connection.execute(query, queryParams);
 
     // 获取总记录数
-    let countQuery = 'SELECT COUNT(*) as total FROM commission_records cr';
-    const countParams = [];
+    const countQuery = `
+      SELECT COUNT(*) as total 
+      FROM commission_records cr
+      LEFT JOIN users u1 ON cr.referrer_id = u1.id
+      LEFT JOIN users u2 ON cr.referee_id = u2.id
+      ${whereClause}
+    `;
 
-    if (status) {
-      countQuery += ' WHERE cr.status = ?';
-      countParams.push(status);
-    }
+    const [totalResult] = await connection.execute(countQuery, queryParams);
+    const total = totalResult[0].total;
 
-    const [totalCount] = await db.execute(countQuery, countParams);
+    // 获取统计数据
+    const [statsResult] = await connection.execute(`
+      SELECT 
+        COUNT(*) as total_commissions,
+        COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_commissions,
+        COUNT(CASE WHEN status = 'approved' THEN 1 END) as approved_commissions,
+        COUNT(CASE WHEN status = 'rejected' THEN 1 END) as rejected_commissions,
+        SUM(commission_amount) as total_amount,
+        SUM(CASE WHEN status = 'pending' THEN commission_amount ELSE 0 END) as pending_amount,
+        SUM(CASE WHEN status = 'approved' THEN commission_amount ELSE 0 END) as approved_amount
+      FROM commission_records
+    `);
 
     res.json({
       success: true,
       data: {
-        records,
+        commissions,
         pagination: {
-          page,
-          limit,
-          total: totalCount[0].total,
-          totalPages: Math.ceil(totalCount[0].total / limit)
-        }
+          page: pageNum,
+          limit: limitNum,
+          total,
+          pages: Math.ceil(total / limitNum)
+        },
+        stats: statsResult[0]
       }
     });
+
   } catch (error) {
-    console.error('Error getting admin commission records:', error);
+    console.error('获取佣金记录失败:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to get commission records'
+      message: '获取佣金记录失败'
     });
   }
 });
 
-// 管理员路由 - 获取所有提现申请
-router.get('/admin/withdrawals', auth, async (req, res) => {
+/**
+ * 审核佣金记录
+ * PUT /api/admin/commissions/:id/review
+ */
+router.put('/:id/review', authenticateAdmin, async (req, res) => {
   try {
-    // 检查管理员权限
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({
-        success: false,
-        message: 'Admin access required'
-      });
-    }
+    const { id } = req.params;
+    const { status, reject_reason, notes } = req.body;
+    const adminId = req.admin.id;
 
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
-    const offset = (page - 1) * limit;
-    const status = req.query.status;
-
-    let query = `
-      SELECT cw.*, u.name as user_name, u.email as user_email,
-             admin.name as admin_name
-      FROM commission_withdrawals cw
-      LEFT JOIN users u ON cw.user_id = u.id
-      LEFT JOIN users admin ON cw.admin_id = admin.id
-    `;
-
-    const params = [];
-
-    if (status) {
-      query += ' WHERE cw.status = ?';
-      params.push(status);
-    }
-
-    query += ` ORDER BY cw.applied_at DESC LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}`;
-
-    const [withdrawals] = await db.execute(query, params);
-
-    // 获取总记录数
-    let countQuery = 'SELECT COUNT(*) as total FROM commission_withdrawals cw';
-    const countParams = [];
-
-    if (status) {
-      countQuery += ' WHERE cw.status = ?';
-      countParams.push(status);
-    }
-
-    const [totalCount] = await db.execute(countQuery, countParams);
-
-    res.json({
-      success: true,
-      data: {
-        withdrawals,
-        pagination: {
-          page,
-          limit,
-          total: totalCount[0].total,
-          totalPages: Math.ceil(totalCount[0].total / limit)
-        }
-      }
-    });
-  } catch (error) {
-    console.error('Error getting admin withdrawals:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get withdrawal records'
-    });
-  }
-});
-
-// 管理员路由 - 处理提现申请
-router.put('/admin/withdrawals/:id', auth, async (req, res) => {
-  try {
-    // 检查管理员权限
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({
-        success: false,
-        message: 'Admin access required'
-      });
-    }
-
-    const withdrawalId = req.params.id;
-    const { status, adminNotes } = req.body;
-
-    if (!['processing', 'completed', 'rejected'].includes(status)) {
+    // 验证状态
+    if (!['approved', 'rejected'].includes(status)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid status'
+        message: '无效的状态，必须是 approved 或 rejected'
       });
     }
 
-    // 获取提现记录
-    const [withdrawal] = await db.execute(
-      'SELECT * FROM commission_withdrawals WHERE id = ?',
-      [withdrawalId]
-    );
+    const connection = await getConnection();
 
-    if (withdrawal.length === 0) {
+    // 检查佣金记录是否存在且为pending状态
+    const [existing] = await connection.execute(`
+      SELECT cr.*, u1.name as referrer_name, u2.name as referee_name
+      FROM commission_records cr
+      LEFT JOIN users u1 ON cr.referrer_id = u1.id
+      LEFT JOIN users u2 ON cr.referee_id = u2.id
+      WHERE cr.id = ? AND cr.status = 'pending'
+    `, [id]);
+
+    if (existing.length === 0) {
       return res.status(404).json({
         success: false,
-        message: 'Withdrawal not found'
+        message: '佣金记录不存在或已经审核过'
       });
     }
 
-    const withdrawalRecord = withdrawal[0];
+    const commission = existing[0];
 
-    if (withdrawalRecord.status !== 'pending' && withdrawalRecord.status !== 'processing') {
-      return res.status(400).json({
-        success: false,
-        message: 'Withdrawal cannot be modified'
-      });
+    // 更新佣金记录状态
+    const updateFields = [
+      'status = ?',
+      'admin_id = ?',
+      'approved_at = CURRENT_TIMESTAMP',
+      'notes = ?',
+      'updated_at = CURRENT_TIMESTAMP'
+    ];
+    
+    const updateParams = [status, adminId, notes || ''];
+
+    if (status === 'rejected' && reject_reason) {
+      updateFields.push('reject_reason = ?');
+      updateParams.push(reject_reason);
     }
 
-    // 开始事务
-    await db.execute('START TRANSACTION');
+    updateParams.push(id);
 
-    try {
-      let updateQuery = '';
-      let updateParams = [];
+    await connection.execute(`
+      UPDATE commission_records 
+      SET ${updateFields.join(', ')}
+      WHERE id = ?
+    `, updateParams);
 
-      if (status === 'completed') {
-        // 完成提现
-        updateQuery = `
-          UPDATE commission_withdrawals 
-          SET status = ?, admin_id = ?, admin_notes = ?, 
-              processed_at = CURRENT_TIMESTAMP, completed_at = CURRENT_TIMESTAMP 
-          WHERE id = ?
-        `;
-        updateParams = [status, req.user.id, adminNotes, withdrawalId];
+    // 如果审核通过，添加到用户佣金余额
+    if (status === 'approved') {
+      await addCommissionToUserBalance(connection, commission);
+    }
 
-        // 更新用户佣金账户（从冻结余额中扣除）
-        await db.execute(
-          `UPDATE commission_accounts 
-           SET frozen_balance = frozen_balance - ?, 
-               total_withdrawn = total_withdrawn + ? 
-           WHERE user_id = ?`,
-          [withdrawalRecord.amount, withdrawalRecord.amount, withdrawalRecord.user_id]
-        );
-      } else if (status === 'rejected') {
-        // 拒绝提现
-        updateQuery = `
-          UPDATE commission_withdrawals 
-          SET status = ?, admin_id = ?, admin_notes = ?, 
-              processed_at = CURRENT_TIMESTAMP 
-          WHERE id = ?
-        `;
-        updateParams = [status, req.user.id, adminNotes, withdrawalId];
+    console.log(`管理员 ${req.admin.email} ${status === 'approved' ? '通过' : '拒绝'}了佣金记录 ${id}`);
 
-        // 退还金额到可用余额
-        await db.execute(
-          `UPDATE commission_accounts 
-           SET available_balance = available_balance + ?, 
-               frozen_balance = frozen_balance - ? 
-           WHERE user_id = ?`,
-          [withdrawalRecord.amount, withdrawalRecord.amount, withdrawalRecord.user_id]
-        );
-      } else {
-        // 处理中
-        updateQuery = `
-          UPDATE commission_withdrawals 
-          SET status = ?, admin_id = ?, admin_notes = ?, 
-              processed_at = CURRENT_TIMESTAMP 
-          WHERE id = ?
-        `;
-        updateParams = [status, req.user.id, adminNotes, withdrawalId];
+    res.json({
+      success: true,
+      message: status === 'approved' ? '佣金审核通过' : '佣金已拒绝',
+      data: {
+        commissionId: id,
+        status,
+        commission_amount: commission.commission_amount,
+        referrer_name: commission.referrer_name
       }
+    });
 
-      await db.execute(updateQuery, updateParams);
-      await db.execute('COMMIT');
-
-      res.json({
-        success: true,
-        message: `Withdrawal ${status} successfully`
-      });
-    } catch (error) {
-      await db.execute('ROLLBACK');
-      throw error;
-    }
   } catch (error) {
-    console.error('Error processing withdrawal:', error);
+    console.error('审核佣金记录失败:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to process withdrawal'
+      message: '审核佣金记录失败'
     });
   }
 });
+
+/**
+ * 将审核通过的佣金添加到用户佣金余额
+ */
+async function addCommissionToUserBalance(connection, commission) {
+  try {
+    // 这里可以添加到用户的佣金余额表
+    // 暂时只记录日志，明天实现具体的余额管理
+    console.log(`💰 佣金 ¥${commission.commission_amount} 将添加到用户 ${commission.referrer_id} 的余额`);
+    
+    // TODO: 明天实现用户佣金余额管理
+    // await connection.execute(`
+    //   INSERT INTO user_commission_balance (user_id, amount, source_type, source_id, description)
+    //   VALUES (?, ?, 'commission', ?, ?)
+    // `, [commission.referrer_id, commission.commission_amount, commission.id, `结算佣金: ${commission.settlement_id}`]);
+    
+  } catch (error) {
+    console.error('添加佣金到用户余额失败:', error);
+    throw error;
+  }
+}
 
 module.exports = router;
