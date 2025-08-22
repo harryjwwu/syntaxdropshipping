@@ -463,12 +463,16 @@ const SPUQuotesPage = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-slate-900">{quote.dxm_client_id}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4 max-w-xs">
                     <div className="flex items-center">
-                      <Package className="h-5 w-5 text-slate-400 mr-2" />
-                      <div>
-                        <div className="text-sm font-medium text-slate-900">{quote.spu}</div>
-                        <div className="text-sm text-slate-500">{quote.spu_name}</div>
+                      <Package className="h-5 w-5 text-slate-400 mr-2 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-medium text-slate-900 truncate">{quote.spu}</div>
+                        <div className="text-sm text-slate-500 truncate" title={quote.spu_name}>
+                          {quote.spu_name && quote.spu_name.length > 30 
+                            ? `${quote.spu_name.substring(0, 30)}...` 
+                            : quote.spu_name}
+                        </div>
                       </div>
                     </div>
                   </td>
