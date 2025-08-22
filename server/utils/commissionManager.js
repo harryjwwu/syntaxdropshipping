@@ -382,11 +382,9 @@ class CommissionManager {
       const db = await getConnection();
       
       const [records] = await db.execute(
-        `SELECT cr.*, u.name as referee_name, u.email as referee_email,
-                o.order_number, o.created_at as order_date
+        `SELECT cr.*, u.name as referee_name, u.email as referee_email
          FROM commission_records cr
          LEFT JOIN users u ON cr.referee_id = u.id
-         LEFT JOIN orders o ON cr.order_id = o.id
          WHERE cr.referrer_id = ?
          ORDER BY cr.created_at DESC
          LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}`,

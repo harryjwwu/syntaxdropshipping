@@ -469,8 +469,8 @@ router.get('/withdrawals', authenticateToken, async (req, res) => {
       LEFT JOIN admins a ON w.admin_id = a.id
       WHERE w.user_id = ?
       ORDER BY w.created_at DESC
-      LIMIT ? OFFSET ?
-    `, [userId, parseInt(limit), offset]);
+      LIMIT ${parseInt(limit)} OFFSET ${offset}
+    `, [userId]);
     
     // 获取总记录数
     const [countResult] = await db.execute(
