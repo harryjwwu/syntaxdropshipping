@@ -371,6 +371,53 @@ router.get('/referral-stats', authenticateToken, async (req, res) => {
 });
 
 /**
+ * 验证推荐码
+ * GET /api/commission/validate-referral/:code
+ */
+router.get('/validate-referral/:code', async (req, res) => {
+  try {
+    const { code } = req.params;
+    
+    if (!code) {
+      return res.status(400).json({
+        success: false,
+        message: '推荐码不能为空'
+      });
+    }
+    
+    const db = await getConnection();
+    const [referrer] = await db.execute(
+      'SELECT id, name, email FROM users WHERE referral_code = ? AND is_active = 1',
+      [code]
+    );
+    
+    if (referrer.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: '推荐码无效或已过期'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        referrer: {
+          id: referrer[0].id,
+          name: referrer[0].name,
+          email: referrer[0].email
+        }
+      }
+    });
+  } catch (error) {
+    console.error('验证推荐码失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '验证推荐码失败'
+    });
+  }
+});
+
+/**
  * 申请提现
  * POST /api/commission/withdraw
  */
