@@ -1,7 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const { authenticateAdmin } = require('../middleware/adminAuth');
+const { authenticateToken } = require('../middleware/auth');
 const { getConnection } = require('../config/database');
+const commissionManager = require('../utils/commissionManager');
 
 /**
  * 获取佣金记录列表
@@ -238,5 +240,265 @@ async function addCommissionToUserBalance(connection, commission) {
     throw error;
   }
 }
+
+// ==================== 用户端API ====================
+
+/**
+ * 获取用户佣金账户信息
+ * GET /api/commission/account
+ */
+router.get('/account', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const account = await commissionManager.getUserCommissionAccount(userId);
+    
+    res.json({
+      success: true,
+      data: account
+    });
+  } catch (error) {
+    console.error('获取佣金账户失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '获取佣金账户失败'
+    });
+  }
+});
+
+/**
+ * 获取用户推荐码
+ * GET /api/commission/referral-code
+ */
+router.get('/referral-code', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const db = await getConnection();
+    
+    const [user] = await db.execute(
+      'SELECT referral_code FROM users WHERE id = ?',
+      [userId]
+    );
+    
+    if (user.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: '用户不存在'
+      });
+    }
+    
+    const referralCode = user[0].referral_code;
+    const baseUrl = process.env.CLIENT_BASE_URL || 'http://localhost:3000';
+    const referralLink = `${baseUrl}/register?ref=${referralCode}`;
+    
+    res.json({
+      success: true,
+      data: {
+        referralCode,
+        referralLink
+      }
+    });
+  } catch (error) {
+    console.error('获取推荐码失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '获取推荐码失败'
+    });
+  }
+});
+
+/**
+ * 获取用户佣金记录
+ * GET /api/commission/records
+ */
+router.get('/records', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { page = 1, limit = 10 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    
+    const records = await commissionManager.getUserCommissionRecords(userId, parseInt(limit), offset);
+    
+    // 获取总记录数
+    const db = await getConnection();
+    const [countResult] = await db.execute(
+      'SELECT COUNT(*) as total FROM commission_records WHERE referrer_id = ?',
+      [userId]
+    );
+    
+    const total = countResult[0].total;
+    
+    res.json({
+      success: true,
+      data: {
+        records,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total,
+          pages: Math.ceil(total / parseInt(limit))
+        }
+      }
+    });
+  } catch (error) {
+    console.error('获取佣金记录失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '获取佣金记录失败'
+    });
+  }
+});
+
+/**
+ * 获取用户推荐统计
+ * GET /api/commission/referral-stats
+ */
+router.get('/referral-stats', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const stats = await commissionManager.getUserReferralStats(userId);
+    
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error('获取推荐统计失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '获取推荐统计失败'
+    });
+  }
+});
+
+/**
+ * 申请提现
+ * POST /api/commission/withdraw
+ */
+router.post('/withdraw', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { amount, method, accountInfo } = req.body;
+    
+    if (!amount || !method || !accountInfo) {
+      return res.status(400).json({
+        success: false,
+        message: '请提供完整的提现信息'
+      });
+    }
+    
+    const withdrawalAmount = parseFloat(amount);
+    if (isNaN(withdrawalAmount) || withdrawalAmount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: '提现金额无效'
+      });
+    }
+    
+    // 检查用户佣金账户余额
+    const account = await commissionManager.getUserCommissionAccount(userId);
+    if (!account || account.available_balance < withdrawalAmount) {
+      return res.status(400).json({
+        success: false,
+        message: '余额不足'
+      });
+    }
+    
+    const db = await getConnection();
+    await db.execute('START TRANSACTION');
+    
+    try {
+      // 生成提现单号
+      const withdrawalNumber = `WD${Date.now()}${userId}`;
+      
+      // 创建提现记录
+      const [result] = await db.execute(`
+        INSERT INTO commission_withdrawals 
+        (user_id, withdrawal_number, amount, method, account_info, status)
+        VALUES (?, ?, ?, ?, ?, 'pending')
+      `, [userId, withdrawalNumber, withdrawalAmount, method, JSON.stringify(accountInfo)]);
+      
+      // 更新用户佣金账户（从可用余额转到冻结余额）
+      await db.execute(`
+        UPDATE commission_accounts 
+        SET available_balance = available_balance - ?,
+            frozen_balance = frozen_balance + ?
+        WHERE user_id = ?
+      `, [withdrawalAmount, withdrawalAmount, userId]);
+      
+      await db.execute('COMMIT');
+      
+      res.json({
+        success: true,
+        data: {
+          withdrawalId: result.insertId,
+          withdrawalNumber,
+          amount: withdrawalAmount,
+          status: 'pending'
+        },
+        message: '提现申请提交成功'
+      });
+    } catch (error) {
+      await db.execute('ROLLBACK');
+      throw error;
+    }
+  } catch (error) {
+    console.error('提现申请失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '提现申请失败'
+    });
+  }
+});
+
+/**
+ * 获取用户提现记录
+ * GET /api/commission/withdrawals
+ */
+router.get('/withdrawals', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { page = 1, limit = 10 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    
+    const db = await getConnection();
+    
+    // 获取提现记录
+    const [withdrawals] = await db.execute(`
+      SELECT w.*, a.name as admin_name
+      FROM commission_withdrawals w
+      LEFT JOIN admins a ON w.admin_id = a.id
+      WHERE w.user_id = ?
+      ORDER BY w.created_at DESC
+      LIMIT ? OFFSET ?
+    `, [userId, parseInt(limit), offset]);
+    
+    // 获取总记录数
+    const [countResult] = await db.execute(
+      'SELECT COUNT(*) as total FROM commission_withdrawals WHERE user_id = ?',
+      [userId]
+    );
+    
+    const total = countResult[0].total;
+    
+    res.json({
+      success: true,
+      data: {
+        withdrawals,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total,
+          pages: Math.ceil(total / parseInt(limit))
+        }
+      }
+    });
+  } catch (error) {
+    console.error('获取提现记录失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '获取提现记录失败'
+    });
+  }
+});
 
 module.exports = router;
