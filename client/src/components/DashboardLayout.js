@@ -30,9 +30,9 @@ const DashboardLayout = ({ children }) => {
       icon: LayoutDashboard,
     },
     {
-      name: 'Orders',
-      href: '/orders',
-      icon: ShoppingCart,
+      name: 'Affiliate',
+      href: '/affiliate',
+      icon: Users,
     },
     {
       name: 'Quotes',
@@ -40,9 +40,9 @@ const DashboardLayout = ({ children }) => {
       icon: FileText,
     },
     {
-      name: 'Affiliate',
-      href: '/affiliate',
-      icon: Users,
+      name: 'Orders',
+      href: '/orders',
+      icon: ShoppingCart,
     },
     {
       name: 'Profile',
