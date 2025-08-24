@@ -132,18 +132,28 @@ const QuoteDetailPage = () => {
                 </h3>
               </div>
               <div className="p-6">
-                <div className="flex items-start space-x-4">
-                  {quote.spu_photo && (
-                    <div className="flex-shrink-0">
+                <div className="flex items-start space-x-6">
+                  <div className="flex-shrink-0">
+                    {quote.spu_photo ? (
                       <img
-                        className="h-20 w-20 rounded-lg object-cover border border-gray-200"
+                        className="h-24 w-24 rounded-lg object-cover border border-gray-200 shadow-sm"
                         src={quote.spu_photo}
                         alt={quote.spu_name}
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
                       />
+                    ) : null}
+                    <div 
+                      className="h-24 w-24 rounded-lg bg-gray-100 flex items-center justify-center border border-gray-200 shadow-sm"
+                      style={{ display: quote.spu_photo ? 'none' : 'flex' }}
+                    >
+                      <Package className="h-10 w-10 text-gray-400" />
                     </div>
-                  )}
+                  </div>
                   <div className="flex-1">
-                    <h4 className="text-xl font-semibold text-gray-900 mb-2">
+                    <h4 className="text-xl font-semibold text-gray-900 mb-3">
                       {quote.spu_name}
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
