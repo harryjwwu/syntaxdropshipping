@@ -40,8 +40,8 @@ const DashboardLayout = ({ children }) => {
       icon: FileText,
     },
     {
-      name: 'Orders',
-      href: '/orders',
+      name: 'Settlement',
+      href: '/settlement',
       icon: ShoppingCart,
     },
     {

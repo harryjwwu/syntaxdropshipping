@@ -25,6 +25,8 @@ import QuotesPage from './pages/QuotesPage';
 import QuoteDetailPage from './pages/QuoteDetailPage';
 import OrdersPage from './pages/OrdersPage';
 import DepositPage from './pages/DepositPage';
+import SettlementPage from './pages/SettlementPage';
+import SettlementDetailPage from './pages/SettlementDetailPage';
 
 // Context
 import { AuthProvider } from './context/AuthContext';
@@ -146,9 +148,14 @@ function App() {
                   <QuoteDetailPage />
                 </DashboardLayout>
               } />
-              <Route path="/orders" element={
+              <Route path="/settlement" element={
                 <DashboardLayout>
-                  <OrdersPage />
+                  <SettlementPage />
+                </DashboardLayout>
+              } />
+              <Route path="/settlement/records/:recordId" element={
+                <DashboardLayout>
+                  <SettlementDetailPage />
                 </DashboardLayout>
               } />
               <Route path="/deposit" element={
@@ -156,6 +163,9 @@ function App() {
                   <DepositPage />
                 </DashboardLayout>
               } />
+              
+              {/* Redirect legacy orders route to settlement */}
+              <Route path="/orders" element={<Navigate to="/settlement" replace />} />
 
               <Route path="/profile" element={
                 <DashboardLayout>

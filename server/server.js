@@ -125,6 +125,7 @@ app.use('/api/admin/user-discount-rules', userDiscountRulesRoutes);
 app.use('/api/admin/settlement', settlementRoutes);
 app.use('/api/admin/commissions', require('./routes/commission'));
 app.use('/api/quotes', userQuotesRoutes);
+app.use('/api/user-settlement', require('./routes/user-settlement'));
 // app.use('/api/dianxiaomi', dianxiaomiRoutes); // 已删除，店小秘无API
 
 // Settings routes

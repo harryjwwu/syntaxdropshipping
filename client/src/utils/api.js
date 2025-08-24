@@ -223,6 +223,18 @@ export const settingsAPI = {
   getCommissionRules: () => api.get('/settings/commission/rules')
 };
 
+// 用户端结算相关API
+export const userSettlementAPI = {
+  // 获取结算记录列表
+  getRecords: (params = {}) => api.get('/user-settlement/records', { params }),
+  
+  // 获取结算记录详情
+  getRecordDetail: (recordId) => api.get(`/user-settlement/records/${recordId}`),
+  
+  // 获取结算统计
+  getStats: () => api.get('/user-settlement/stats')
+};
+
 // Utility functions
 export const apiUtils = {
   // Format error message for display
