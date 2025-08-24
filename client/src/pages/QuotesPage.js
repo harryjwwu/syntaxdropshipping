@@ -103,7 +103,12 @@ const QuotesPage = () => {
 
   // 处理筛选
   const handleFilterChange = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
+    // 只有在非分页参数变化时才重置页码
+    if (key === 'page') {
+      setFilters(prev => ({ ...prev, [key]: value }));
+    } else {
+      setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
+    }
   };
 
   // 清除筛选
