@@ -9,7 +9,8 @@ import {
   DollarSign,
   TrendingUp,
   BarChart3,
-  FileText
+  FileText,
+  Weight
 } from 'lucide-react';
 import { quotesAPI } from '../utils/api';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -323,15 +324,25 @@ const QuotesPage = () => {
                     <tr key={quote.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          {quote.spu_photo && (
-                            <div className="flex-shrink-0 h-10 w-10">
+                          <div className="flex-shrink-0 h-12 w-12">
+                            {quote.spu_photo ? (
                               <img
-                                className="h-10 w-10 rounded-full object-cover"
+                                className="h-12 w-12 rounded-lg object-cover border border-gray-200"
                                 src={quote.spu_photo}
                                 alt={quote.spu_name}
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                  e.target.nextSibling.style.display = 'flex';
+                                }}
                               />
+                            ) : null}
+                            <div 
+                              className="h-12 w-12 rounded-lg bg-gray-100 flex items-center justify-center border border-gray-200"
+                              style={{ display: quote.spu_photo ? 'none' : 'flex' }}
+                            >
+                              <Package className="h-6 w-6 text-gray-400" />
                             </div>
-                          )}
+                          </div>
                           <div className="ml-4">
                             <div className="text-sm font-medium text-gray-900">
                               {quote.spu_name}
@@ -339,6 +350,12 @@ const QuotesPage = () => {
                             <div className="text-sm text-gray-500">
                               {quote.spu}
                             </div>
+                            {quote.weight && (
+                              <div className="text-xs text-gray-400 mt-1 flex items-center">
+                                <Weight className="h-3 w-3 mr-1" />
+                                {quote.weight}kg
+                              </div>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -418,22 +435,38 @@ const QuotesPage = () => {
                     >
                       上一页
                     </button>
-                    {Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
-                      const page = i + 1;
-                      return (
-                        <button
-                          key={page}
-                          onClick={() => handleFilterChange('page', page)}
-                          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                            page === pagination.page
-                              ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                              : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      );
-                    })}
+                    {(() => {
+                      const currentPage = pagination.page;
+                      const totalPages = pagination.pages;
+                      const maxVisiblePages = 5;
+                      
+                      let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+                      let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+                      
+                      // 调整起始页，确保显示足够的页码
+                      if (endPage - startPage + 1 < maxVisiblePages) {
+                        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+                      }
+                      
+                      const pages = [];
+                      for (let i = startPage; i <= endPage; i++) {
+                        pages.push(
+                          <button
+                            key={i}
+                            onClick={() => handleFilterChange('page', i)}
+                            className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                              i === currentPage
+                                ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                                : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                            }`}
+                          >
+                            {i}
+                          </button>
+                        );
+                      }
+                      
+                      return pages;
+                    })()}
                     <button
                       onClick={() => handleFilterChange('page', Math.min(pagination.pages, pagination.page + 1))}
                       disabled={pagination.page === pagination.pages}
