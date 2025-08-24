@@ -131,6 +131,24 @@ export const commissionAPI = {
   validateReferral: (code) => api.get(`/commission/validate-referral/${code}`)
 };
 
+// Quotes API
+export const quotesAPI = {
+  // 获取用户的报价列表
+  getQuotes: (params = {}) => api.get('/quotes', { params }),
+  
+  // 获取报价详情
+  getQuoteDetail: (id) => api.get(`/quotes/${id}`),
+  
+  // 获取用户的SPU列表
+  getSpuList: () => api.get('/quotes/spus/list'),
+  
+  // 获取用户的国家列表
+  getCountryList: () => api.get('/quotes/countries/list'),
+  
+  // 获取报价统计信息
+  getQuoteStats: () => api.get('/quotes/stats')
+};
+
 // Admin API
 export const adminAPI = {
   // 管理员登录

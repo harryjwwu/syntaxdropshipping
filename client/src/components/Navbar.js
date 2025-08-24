@@ -48,7 +48,12 @@ const Navbar = () => {
   const navItems = [
     { path: '/', label: t('nav.home') },
     { path: '/services', label: t('nav.services') },
-    ...(isAuthenticated ? [{ path: '/affiliate', label: t('nav.commission') }] : []),
+    ...(isAuthenticated ? [
+      { path: '/dashboard', label: t('nav.dashboard') || '控制台' },
+      { path: '/orders', label: t('nav.orders') || '订单' },
+      { path: '/quotes', label: t('nav.quotes') || '报价' },
+      { path: '/affiliate', label: t('nav.commission') }
+    ] : []),
     { path: '/contact', label: t('nav.contact') }
   ];
 

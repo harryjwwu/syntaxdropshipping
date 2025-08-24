@@ -22,6 +22,7 @@ const { router: spuPriceHistoryRoutes } = require('./routes/spu-price-history');
 const cosRoutes = require('./routes/cos');
 const userDiscountRulesRoutes = require('./routes/user-discount-rules');
 const settlementRoutes = require('./routes/settlement');
+const userQuotesRoutes = require('./routes/user-quotes');
 // const dianxiaomiRoutes = require('./routes/dianxiaomi'); // 已删除，店小秘无API
 
 // Import database
@@ -123,6 +124,7 @@ app.use('/api/cos', cosRoutes);
 app.use('/api/admin/user-discount-rules', userDiscountRulesRoutes);
 app.use('/api/admin/settlement', settlementRoutes);
 app.use('/api/admin/commissions', require('./routes/commission'));
+app.use('/api/quotes', userQuotesRoutes);
 // app.use('/api/dianxiaomi', dianxiaomiRoutes); // 已删除，店小秘无API
 
 // Settings routes

@@ -21,6 +21,7 @@ import ProfilePage from './pages/ProfilePage';
 // Dashboard Pages
 import DashboardPage from './pages/DashboardPage';
 import AffiliatePage from './pages/AffiliatePage';
+import QuotesPage from './pages/QuotesPage';
 import OrdersPage from './pages/OrdersPage';
 import DepositPage from './pages/DepositPage';
 
@@ -132,6 +133,11 @@ function App() {
               <Route path="/affiliate" element={
                 <DashboardLayout>
                   <AffiliatePage />
+                </DashboardLayout>
+              } />
+              <Route path="/quotes" element={
+                <DashboardLayout>
+                  <QuotesPage />
                 </DashboardLayout>
               } />
               <Route path="/orders" element={
