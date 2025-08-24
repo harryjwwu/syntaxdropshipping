@@ -55,7 +55,9 @@ router.get('/', authenticateToken, async (req, res) => {
       params.push(`%${search}%`, `%${search}%`);
     }
     
-    // 获取报价列表
+    // 获取报价列表 - 使用字符串插值避免MySQL2驱动的LIMIT/OFFSET参数绑定问题
+    const limitNum = parseInt(limit);
+    const offsetNum = parseInt(offset);
     const [quotes] = await pool.execute(`
       SELECT 
         sp.*,
@@ -70,7 +72,7 @@ router.get('/', authenticateToken, async (req, res) => {
       LEFT JOIN countries c ON sp.country_code = c.code
       ${whereClause}
       ORDER BY sp.created_at DESC
-      LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}
+      LIMIT ${limitNum} OFFSET ${offsetNum}
     `, [...params]);
     
     // 获取总数
