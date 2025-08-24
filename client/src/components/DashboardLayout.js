@@ -5,6 +5,7 @@ import {
   LayoutDashboard, 
   Users, 
   ShoppingCart, 
+  FileText,
   Menu, 
   X, 
   LogOut,
@@ -29,14 +30,19 @@ const DashboardLayout = ({ children }) => {
       icon: LayoutDashboard,
     },
     {
-      name: 'Affiliate',
-      href: '/affiliate',
-      icon: Users,
-    },
-    {
       name: 'Orders',
       href: '/orders',
       icon: ShoppingCart,
+    },
+    {
+      name: 'Quotes',
+      href: '/quotes',
+      icon: FileText,
+    },
+    {
+      name: 'Affiliate',
+      href: '/affiliate',
+      icon: Users,
     },
     {
       name: 'Profile',
