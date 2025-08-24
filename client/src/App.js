@@ -22,6 +22,7 @@ import ProfilePage from './pages/ProfilePage';
 import DashboardPage from './pages/DashboardPage';
 import AffiliatePage from './pages/AffiliatePage';
 import QuotesPage from './pages/QuotesPage';
+import QuoteDetailPage from './pages/QuoteDetailPage';
 import OrdersPage from './pages/OrdersPage';
 import DepositPage from './pages/DepositPage';
 
@@ -138,6 +139,11 @@ function App() {
               <Route path="/quotes" element={
                 <DashboardLayout>
                   <QuotesPage />
+                </DashboardLayout>
+              } />
+              <Route path="/quotes/:id" element={
+                <DashboardLayout>
+                  <QuoteDetailPage />
                 </DashboardLayout>
               } />
               <Route path="/orders" element={
